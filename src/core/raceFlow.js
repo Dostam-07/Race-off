@@ -177,7 +177,7 @@ const raceFlow = {
       this._countStep = step;
       if (step < 3) {
         this.hud.count(3 - step);
-        this.audio.sfx('beep');
+        this.audio.sfx('beep', step + 1); // 3..2..1: each blip a note higher
         this.audio.setRev(0.35 + step * 0.2);
       } else {
         this.hud.count('GO!', true);

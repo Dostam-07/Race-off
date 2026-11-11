@@ -120,6 +120,22 @@ export class AudioEngine {
     this.eng.start();
     this.eng2.start();
 
+    // Rival engine: one extra oscillator for the nearest other kart. Its
+    // pitch is doppler-shifted by the rival's radial velocity, so karts you
+    // pass or that pass you sweep audibly.
+    this.riv = ctx.createOscillator();
+    this.riv.type = 'sawtooth';
+    this.rivF = ctx.createBiquadFilter();
+    this.rivF.type = 'lowpass';
+    this.rivF.frequency.value = 420;
+    this.rivF.Q.value = 2;
+    this.rivG = ctx.createGain();
+    this.rivG.gain.value = 0;
+    this.riv.connect(this.rivF);
+    this.rivF.connect(this.rivG);
+    this.rivG.connect(this.fxg);
+    this.riv.start();
+
     // Wind rush.
     this.windG = ctx.createGain();
     this.windG.gain.value = 0;
@@ -165,6 +181,7 @@ export class AudioEngine {
     dfilter.Q.value = 0.8;
     dsrc.connect(dfilter);
     dfilter.connect(this.driftG);
+    this.driftF = dfilter; // kept so the surface can retune the screech
     this.driftG.connect(this.fxg);
     dsrc.start();
 
@@ -503,9 +520,11 @@ export class AudioEngine {
 
   /**
    * Per-frame continuous mix: engine pitch, wind, tyre screech and crowd.
-   * speed (units/s), boosting, drifting, crowd closeness 0..1, inTunnel 0..1
+   * speed (units/s), boosting, drifting, crowd closeness 0..1, inTunnel 0..1,
+   * offroad (grass/dirt retunes the skid), rival = nearest other kart as
+   * { speed, dist, rel } where rel = d(dist)/dt (negative while approaching).
    */
-  update(speed, boosting, drifting, crowd, audible, tunnel = 0) {
+  update(speed, boosting, drifting, crowd, audible, tunnel = 0, offroad = false, rival = null) {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
     const norm = Math.abs(speed) / 33;
@@ -520,8 +539,30 @@ export class AudioEngine {
     this.eng2.frequency.setTargetAtTime(freq * 0.5, t, 0.05);
     this.engF.frequency.setTargetAtTime(240 + norm * 620, t, 0.05);
     this.engG.gain.setTargetAtTime(audible ? 0.012 + norm * 0.014 : 0, t, 0.08);
-    this.driftG.gain.setTargetAtTime(drifting ? 0.035 : 0, t, 0.04);
+    // Skid: gravelly and louder on grass/dirt, crisp on tarmac.
+    if (drifting && offroad) {
+      this.driftF.frequency.setTargetAtTime(760, t, 0.05);
+      this.driftF.Q.setTargetAtTime(0.5, t, 0.05);
+      this.driftG.gain.setTargetAtTime(audible ? 0.055 : 0, t, 0.04);
+    } else {
+      this.driftF.frequency.setTargetAtTime(3200, t, 0.05);
+      this.driftF.Q.setTargetAtTime(0.8, t, 0.05);
+      this.driftG.gain.setTargetAtTime(drifting && audible ? 0.035 : 0, t, 0.04);
+    }
     this.crowdG.gain.setTargetAtTime(crowd * 0.35, t, 0.3);
+    // Rival engine with doppler shift: approaching karts sound higher,
+    // receding ones lower, and volume fades with distance.
+    if (rival && audible) {
+      const rnorm = Math.min(1, Math.abs(rival.speed) / 33);
+      const rfreq = 64 + rnorm * 110;
+      const dopp = Math.max(0.55, Math.min(1.65, 1 - (rival.rel || 0) / 46));
+      this.riv.frequency.setTargetAtTime(rfreq * dopp, t, 0.06);
+      this.rivF.frequency.setTargetAtTime(260 + rnorm * 380, t, 0.1);
+      const near = Math.max(0, 1 - rival.dist / 26);
+      this.rivG.gain.setTargetAtTime(near * near * 0.018, t, 0.09);
+    } else {
+      this.rivG.gain.setTargetAtTime(0, t, 0.15);
+    }
   }
 
   // ------------------------------------------------------------------- sfx
@@ -529,10 +570,13 @@ export class AudioEngine {
     if (!this.ctx) return;
     const n = this.ctx.currentTime + 0.005;
     switch (name) {
-      case 'beep':
-        this.tone('square', 440, n, 0.22, 0.28, null, { lp: 2500 });
-        this.tone('sine', 440, n, 0.3, 0.3);
+      case 'beep': {
+        // param: countdown number (3,2,1) - each blip a rising note.
+        const bf = 440 + (param - 1) * 110;
+        this.tone('square', bf, n, 0.22, 0.28, null, { lp: 2500 });
+        this.tone('sine', bf, n, 0.3, 0.3);
         break;
+      }
       case 'go':
         this.tone('square', 880, n, 0.7, 0.3, null, { lp: 3500 });
         this.tone('sine', 880, n, 0.8, 0.35);

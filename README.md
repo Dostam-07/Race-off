@@ -54,7 +54,9 @@ Grand Prix, or online with friends. No install, no account, just play.
   that adapts from ultrawide desktops down to portrait phones (audited at
   8 viewport sizes).
 - 🔊 **Procedural audio** — engine, skids, items and a chiptune soundtrack
-  synthesised live with WebAudio. No audio downloads.
+  synthesised live with WebAudio. No audio downloads. Karts around you get a
+  doppler-shifted engine (higher on approach, lower as they pull away), the
+  skid turns gravelly off the tarmac, and the countdown blips climb 3-2-1-GO.
 - ⚡ **One codebase, no engine lock-in** — plain JavaScript + Three.js +
   Vite. Everything is small, readable modules you can actually edit.
 

@@ -21,6 +21,7 @@ const loopMethods = {
     this.prevRank = 1;
     this.rankCd = 0;
     this.boostKick = 0;
+    this._rivalPrev = null; // previous distance to nearest rival, for doppler
     this.hints = {};
     this.accelHeld = 0;
     this.goT = 0;
@@ -207,12 +208,36 @@ const loopMethods = {
       0,
       1,
     );
+    // Nearest rival kart + radial velocity, for the doppler engine sound.
+    let rival = null;
+    let bestDist = Infinity;
+    for (const k of this.karts) {
+      if (k === player || !k.active) continue;
+      const d = Math.hypot(k.x - player.x, k.z - player.z);
+      if (d < bestDist) {
+        bestDist = d;
+        rival = k;
+      }
+    }
+    let rivalInfo = null;
+    if (rival) {
+      const rel = this._rivalPrev == null ? 0 : (bestDist - this._rivalPrev) / Math.max(dt, 0.001);
+      // Smooth the radial velocity so the doppler sweep doesn't jitter.
+      this._rivalRel = (this._rivalRel || 0) + (rel - (this._rivalRel || 0)) * Math.min(1, dt * 8);
+      rivalInfo = { speed: rival.speed, dist: bestDist, rel: this._rivalRel };
+      this._rivalPrev = bestDist;
+    } else {
+      this._rivalPrev = null;
+    }
     this.audio.update(
       player.speed,
       player.boost > 0,
       player.drifting && player.onGround,
       this.state === 'title' ? 0 : 0.05 + 0.2 * crowdNear,
       this.state !== 'title',
+      0, // tunnel amount (no tunnel surfaces in the current tracks)
+      !!player.offroad,
+      rivalInfo,
     );
 
     this.input.endFrame();
@@ -230,7 +255,7 @@ const loopMethods = {
       this.countN = n;
       if (n > 0) {
         this.hud.count(n, false);
-        this.audio.sfx('beep');
+        this.audio.sfx('beep', 4 - n); // 3..2..1: each blip a note higher
         this.trackMeshes?.lightLamp?.(3 - n, 'red');
       } else {
         this.hud.count('GO!', true);
