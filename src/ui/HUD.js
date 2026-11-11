@@ -470,9 +470,35 @@ export class HUD {
     });
 
     html += `<div class="laps">${lapTimes.map((t, i) => `<span class="${t === best ? 'best' : ''}">LAP ${i + 1} <b>${formatTime(t)}</b></span>`).join('')}<span><img src="${this.icons.coin || ''}" alt=""><b>${player.coins}</b></span></div>`;
+    html += `<div class="rshare"><div id="r-share" class="mbtn">SHARE RESULT</div></div>`;
+    if (this.game?.timeTrial) html += `<div class="lboard" id="lboard"><div class="lb-h">TOP TIMES</div><div class="lb-body" id="lboard-body">\u2026</div></div>`;
     html += `<div class="again">${hint || (this.touch ? 'TAP TO RACE AGAIN' : 'PRESS ENTER TO RACE AGAIN')}</div>`;
 
     el.innerHTML = html;
+    // Snapshot the result now - the karts keep simulating after the panel opens.
+    const card = {
+      place,
+      trackId: this.game?.track?.def?.id,
+      trackName: this.game?.track?.def?.name,
+      time: cup ? null : player.finishTime,
+      points: cup ? cup.pts[cup.key(player)] : null,
+      lapBest: best || null,
+      charIcon: this.icons[player.def.id] || '',
+      coins: player.coins,
+      cc: this.game?.cc,
+      mirror: this.game?.mirror,
+    };
+    $('r-share')?.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const { buildShareCard, shareCard, shareText } = await import('../core/shareCard.js');
+      const cv = await buildShareCard(card);
+      const how = await shareCard(cv, shareText(card));
+      this.game?.hud?.toast(
+        how === 'shared' ? 'CARD SHARED!' : 'CARD SAVED AS RACE-OFF.PNG',
+        'gold',
+        2.5,
+      );
+    });
     el.classList.toggle('q', !!quit);
     el.classList.add('on');
   }

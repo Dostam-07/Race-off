@@ -135,6 +135,29 @@ static host (GitHub Pages, Netlify, itch.io…) and it plays. Serve it over
 Race-Off", the app opens fullscreen, and previously downloaded tracks stay
 available offline.
 
+### One-command deploy
+
+```powershell
+.\tools\deploy.ps1 netlify   # or: vercel | surge | pages
+```
+
+Rebuilds `dist/` and ships it. Each target asks for a one-time interactive
+login and remembers it. For GitHub Pages, push the repo and let
+`.github/workflows/deploy.yml` deploy on every push (enable once under
+Settings → Pages → Source: "GitHub Actions"). After deploying, verify the
+live URL serves `/manifest.webmanifest`, `/sw.js` and `/og-image.jpg`.
+
+### Optional companion server (public rooms + leaderboards)
+
+```bash
+node companion/server.mjs   # zero-dependency Node server on :8785
+```
+
+Adds public-room listing / quick match and per-track time-trial
+leaderboards. Without it everything still works — rooms fall back to invite
+codes and leaderboards keep a local top-10 in your browser. Point the game
+at a hosted companion with `?dir=https://your-companion.example`.
+
 ## ⏱️ Time trial & your ghost
 
 Pick **TIME TRIAL** on the track picker (it sits next to RACE above the
@@ -150,6 +173,21 @@ your browser:
 
 Tip: racing a friend's local best? Records live in the browser profile, so
 passing the keyboard around works — each profile keeps its own ghosts.
+
+Every time-trial finish also submits your time to the **per-track
+leaderboard** (top 10 per track and engine class) and shows the board right
+in the results panel, with a **TOP N TIME!** toast when you crack it. With
+the companion server running the board is shared by everyone; without it you
+still get your own local top 10.
+
+## 📸 Share cards
+
+The results panel has a **SHARE RESULT** button that paints a 1200×630 card
+— "I FINISHED 1ST! ON VOLCANO RUSH — 1:42.37", your racer's portrait, best
+lap and coins — and hands it to the native share sheet on phones, or saves
+`race-off.png` and copies the text on desktop. Post it, challenge someone.
+
+![share card](docs/shot-share.png)
 
 ## 🌐 Online multiplayer
 
@@ -281,6 +319,8 @@ node tools/test_class_mirror.mjs # 50/100/150cc speeds + mirrored geometry + AI 
 node tools/test_daily.mjs     # daily challenge: seed, one attempt, share hash
 node tools/test_unlocks.mjs   # GP win -> champion livery + picker badge
 node tools/test_pwa.mjs       # manifest, icons, service worker (preview build)
+node tools/test_share.mjs     # results share card: canvas render + download
+node tools/test_scores.mjs    # leaderboards: companion roundtrip + offline board
 node tools/test_spacing.mjs   # 600-frame race, asserts no kart overlap
 node tools/test_mp.mjs        # host + guest in two pages
 node tools/test_interp.mjs    # snapshot interpolation + adaptive jitter buffer

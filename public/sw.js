@@ -1,7 +1,7 @@
 // Race-Off service worker - runtime cache with stale-while-revalidate.
 // Keeps the game playable offline after a first visit and speeds up repeat
 // loads. Version the cache name when you ship breaking asset changes.
-const CACHE = 'raceoff-v1';
+const CACHE = 'raceoff-v2';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

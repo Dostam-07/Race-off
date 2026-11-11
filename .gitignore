@@ -24,3 +24,6 @@ docs/*.jpg
 # one-off debug scripts + directory runtime snapshot
 tools/dbg_*.mjs
 companion/rooms.json
+companion/scores.json
+tools/og_check.jpg
+tools/share_check.jpg

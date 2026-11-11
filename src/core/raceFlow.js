@@ -382,6 +382,36 @@ const raceFlow = {
     // Fit the panel now that its content (and real height) is known.
     this.fitUI();
     this.menus.hideResults = null;
+    // Time trial: submit the run to the leaderboard and show the top times.
+    if (this.timeTrial && this.player.finished) {
+      this.updateBoard();
+    }
+  },
+
+  /** Submit my time-trial time and fill the results leaderboard. */
+  async updateBoard() {
+    try {
+      const { submitScore, fetchScores } = await import('../net/scores.js');
+      const track = this.track.def.id;
+      const myName = this.hud.names?.[this.player.def.id] || 'GHOST';
+      submitScore(track, this.cc, this.raceTime, myName);
+      const top = await fetchScores(track, this.cc);
+      // My standing in the merged board (local + remote).
+      const mine = top.findIndex(
+        (e) => e.name === myName && Math.abs(e.time - this.raceTime) < 0.01,
+      );
+      if (mine >= 0 && mine < 10) {
+        setTimeout(() => this.hud.toast(`TOP ${mine + 1} TIME!`, 'gold', 3), 900);
+      }
+      const body = document.getElementById('lboard-body');
+      if (!body) return;
+      body.innerHTML = top.length
+        ? top.map(
+            (e, i) =>
+              `<div class="lb-r${i === 0 ? ' first' : ''}"><span class="lb-n">${i + 1}</span><span class="lb-name">${e.name}</span><span class="lb-t">${formatTime(e.time)}</span></div>`,
+          ).join('')
+        : '<div class="lb-r"><span class="lb-name">NO TIMES YET</span></div>';
+    } catch { /* board is a bonus - never break the results panel */ }
   },
 
   raceAgain() {

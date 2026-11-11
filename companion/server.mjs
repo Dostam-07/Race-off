@@ -11,9 +11,13 @@
 //   GET  /rooms        list of public, open rooms
 //   GET  /rooms/:code  one room (any visibility) - gen/level/phase/players
 //   DELETE /rooms/:code  close a room (host leaving)
+//   POST /scores       { track, cc, name, time }  submit a time-trial time
+//   GET  /scores/:track?cc=1   top 10 times for that track + engine class
 //
 // Rooms expire after 45s without a heartbeat. The registry is mirrored to
 // rooms.json every 10s and reloaded on boot so a restart keeps the directory.
+// Leaderboards are mirrored to scores.json the same way (top 10 per track+cc,
+// max 1000 entries total so the file stays small).
 //
 // Run: node companion/server.mjs   (port 8785, override with PORT)
 
@@ -48,6 +52,34 @@ const snap = () => {
   } catch { /* read-only disk - directory stays in memory */ }
 };
 setInterval(snap, 10000).unref();
+
+// --------------------------------------------------------------- leaderboards
+const SCORES_FILE = join(dirname(fileURLToPath(import.meta.url)), 'scores.json');
+const TRACK_RE = /^[a-z]{3,10}$/;
+const MAX_BOARDS = 100; // track:cc keys kept
+
+/** @type {Map<string, Array>} "track:cc" -> sorted top-10 entries */
+const boards = new Map();
+
+try {
+  if (existsSync(SCORES_FILE)) {
+    const saved = JSON.parse(readFileSync(SCORES_FILE, 'utf8'));
+    for (const [k, list] of Object.entries(saved || {})) {
+      if (Array.isArray(list)) boards.set(k, list.slice(0, 10));
+    }
+  }
+} catch { /* corrupt snapshot - start empty */ }
+
+let scoresDirty = false;
+setInterval(() => {
+  if (!scoresDirty) return;
+  scoresDirty = false;
+  try {
+    writeFileSync(SCORES_FILE, JSON.stringify(Object.fromEntries(boards)));
+  } catch { /* read-only disk - scores stay in memory */ }
+}, 5000).unref();
+
+const validTime = (t) => Number.isFinite(t) && t > 1 && t < 1000000;
 
 const json = (res, code, body) => {
   const data = JSON.stringify(body);
@@ -138,6 +170,47 @@ const server = http.createServer(async (req, res) => {
       public: room.public,
       age: Date.now() - room.ts, // ms since the last heartbeat
     });
+  }
+
+  // POST /scores - submit a time-trial time
+  if (req.method === 'POST' && parts[0] === 'scores' && parts.length === 1) {
+    let msg;
+    try {
+      msg = JSON.parse(await readBody(req));
+    } catch {
+      return json(res, 400, { error: 'bad json' });
+    }
+    const track = String(msg.track || '');
+    if (!TRACK_RE.test(track)) return json(res, 400, { error: 'bad track' });
+    const cc = [0.85, 1, 1.15].includes(msg.cc) ? msg.cc : 1;
+    const time = +msg.time;
+    if (!validTime(time)) return json(res, 400, { error: 'bad time' });
+    const name = String(msg.name || 'GHOST').slice(0, 12) || 'GHOST';
+    const key = `${track}:${cc}`;
+    const list = (boards.get(key) || []).filter(
+      (e) => !(e.name === name && Math.round(e.time * 100) === Math.round(time * 100)),
+    );
+    const entry = { name, time: Math.round(time * 100) / 100, ts: Date.now() };
+    list.push(entry);
+    list.sort((a, b) => a.time - b.time);
+    boards.set(key, list.slice(0, 10));
+    while (boards.size > MAX_BOARDS) {
+      const oldest = [...boards.keys()][0];
+      boards.delete(oldest);
+    }
+    scoresDirty = true;
+    const rank = list.indexOf(entry) + 1;
+    return json(res, 200, { ok: true, rank: rank <= 10 ? rank : 0, top: boards.get(key) });
+  }
+
+  // GET /scores/:track?cc=1 - the top-10 board
+  if (req.method === 'GET' && parts[0] === 'scores' && parts.length === 2) {
+    const track = String(parts[1] || '');
+    if (!TRACK_RE.test(track)) return json(res, 400, { error: 'bad track' });
+    const ccQ = parseFloat(url.searchParams.get('cc'));
+    const cc = [0.85, 1, 1.15].includes(ccQ) ? ccQ : 1;
+    const list = boards.get(`${track}:${cc}`) || [];
+    return json(res, 200, { track, cc, top: list });
   }
 
   json(res, 404, { error: 'not found' });
