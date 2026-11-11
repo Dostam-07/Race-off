@@ -1,0 +1,17 @@
+# dependencies
+node_modules/
+
+# build output (regenerate with: npx vite build)
+dist/
+
+# original-game extraction / reverse-engineering workspace (not for sharing)
+extract/
+pretty/
+
+# OS / editor noise
+Thumbs.db
+.DS_Store
+*.log
+
+# test artifacts
+tools/*.png

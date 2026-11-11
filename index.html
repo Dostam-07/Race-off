@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Race-Off — Cartoon Kart Racing Game</title>
+<meta name="description" content="Race-Off is a free browser kart racing game: drift, boost and battle six animal racers across four tracks — Beach Blast, Jungle Dash, Volcano Rush and Sky Sprint. Play solo, Grand Prix or online multiplayer with friends. No install, just play.">
+<meta name="keywords" content="kart racing game, browser game, cartoon racing, multiplayer racing, drift, grand prix, race-off, free game, html5 game, three.js">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Race-Off — Cartoon Kart Racing Game">
+<meta property="og:description" content="Drift, boost and battle six animal racers across four tracks. Solo, Grand Prix or online multiplayer — free in your browser.">
+<meta property="og:image" content="/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Race-Off — Cartoon Kart Racing Game">
+<meta name="twitter:description" content="Drift, boost and battle six animal racers across four tracks. Free in your browser.">
+<meta name="twitter:image" content="/og-image.png">
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0a1436">
+<link rel="stylesheet" href="/src/styles/game.css">
+</head>
+<body>
+<div id="loading"><img class="loadlogo" src="/logo-raceoff.png" alt="Race-Off"><div id="barwrap"><div id="bar"></div></div><div id="loadlabel">Loading</div></div>
+<div id="title">
+  <div class="tleft">
+    <div class="logo">
+      <img class="logoimg" src="/logo-raceoff.png" alt="Race-Off">
+      <div class="b">WILD ISLE GRAND PRIX</div>
+    </div>
+    <div id="mp">
+      <div id="modes"><div id="m-solo" class="mbtn big solo">SINGLE PLAYER</div><div id="mp-new" class="mbtn big multi">MULTIPLAYER</div></div>
+      <div id="cup">
+        <div class="lvlcap stroke">PLAY THE CUP <em>·</em> OR PICK ONE TRACK</div>
+        <div id="ttmode"><span class="mchip on" data-tt="0">RACE</span><span class="mchip" data-tt="1">TIME TRIAL</span></div>
+        <div id="levels"><div class="lvl gp" data-l="gp"><span class="art"></span><i>★</i><b>GRAND PRIX</b><small>ALL 4 TRACKS</small></div><div class="lvl" data-l="beach"><span class="art"></span><i>1</i><b>BEACH BLAST</b><small>BEACH</small></div><div class="lvl" data-l="jungle"><span class="art"></span><i>2</i><b>JUNGLE DASH</b><small>JUNGLE</small></div><div class="lvl" data-l="volcano"><span class="art"></span><i>3</i><b>VOLCANO RUSH</b><small>VOLCANO</small></div><div class="lvl" data-l="sky"><span class="art"></span><i>4</i><b>SKY SPRINT</b><small>FINALE</small></div></div>
+        <div id="sgo"><div id="m-back" class="mbtn ghost">◀ BACK</div><div id="m-go" class="mbtn go">START GRAND PRIX</div></div>
+      </div>
+      <div id="lobby">
+        <div class="lrow"><span id="l-room" class="stroke">ROOM<b id="l-code"></b></span><div id="l-invite" class="mbtn">COPY INVITE LINK</div><input id="l-name" maxlength="30" placeholder="YOUR NAME" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="done"><div id="l-leave" class="mbtn ghost">LEAVE</div></div>
+        <div id="l-mode"><span class="mchip" data-m="gp">GRAND PRIX</span><span class="mchip" data-m="beach">BEACH BLAST</span><span class="mchip" data-m="jungle">JUNGLE DASH</span><span class="mchip" data-m="volcano">VOLCANO RUSH</span><span class="mchip" data-m="sky">SKY SPRINT</span></div>
+        <div id="l-players"></div>
+        <div id="l-start" class="mbtn go off">START RACE</div>
+        <div id="l-status" class="stroke"></div>
+      </div>
+      <div class="hint"><b>ENTER</b>START<b>← →</b>RACER<b>M</b>SOUND</div>
+    </div>
+  </div>
+  <div class="tright"><div id="pick"><div id="pickname" class="stroke"></div><div class="ph stroke">CHOOSE YOUR RACER</div><div id="picks"></div></div></div>
+</div>
+<div id="hud">
+  <div id="lap" class="stroke">LAP<b id="lapn">1</b><i>/3</i></div>
+  <div id="timer" class="stroke">0:00.00</div>
+  <div id="best" class="stroke"></div>
+  <div id="coins" class="stroke"><img id="coinimg" alt=""><span id="coinn">0</span></div>
+  <div id="board"></div>
+  <canvas id="minimap" width="460" height="380"></canvas>
+  <div id="itembox"><img id="itemimg" alt=""></div><div id="itemname" class="stroke"></div><div id="itemkey">E</div>
+  <div id="pos"></div>
+  <div id="speed" class="stroke"><span id="spd">0</span><small>KM/H</small><div id="spdtrack"><div id="spdbar"></div></div><div id="turbo"><span class="kb">TURBO · SHIFT</span><span class="tc">TURBO</span><i><b></b></i><i><b></b></i><i><b></b></i></div></div>
+  <div id="tags"></div><div id="flash"></div>
+  <div id="toast"></div><div id="warn">!</div>
+  <div id="banner"></div><div id="count"></div>
+</div>
+<div id="howto"><h4>HOW TO WIN</h4>
+  <p><b class="c1">GRAB COINS</b> Each one makes you faster</p>
+  <p><b class="c2">DRIFT + DO TRICKS</b> Both fill your turbo meter</p>
+  <p><b class="c3"><span class="kb">PRESS SHIFT</span><span class="tc">TAP TURBO</span></b> Spend a bar to blast ahead</p>
+</div>
+<div id="touch">
+  <div id="tsteer"><div id="tpill"><span>◀</span><i id="tknob"></i><span>▶</span></div></div>
+  <div id="tbtns">
+    <div class="tb" id="tb-drift">DRIFT</div>
+    <div class="tb" id="tb-turbo"><u></u><b id="tb-n">1</b>TURBO</div>
+    <div class="tb" id="tb-item"><img id="tb-itemimg" alt=""><span>ITEM</span></div>
+    <div class="tb" id="tb-brake">BRAKE</div>
+  </div>
+  <div class="tb" id="tb-pause">II</div>
+</div>
+<div id="mutechip" class="off">🔇 Sound off · press M</div>
+<div id="results"></div>
+<div id="pause"><h2 class="stroke" id="p-title">PAUSED</h2>
+  <div class="ctl kb"><span><b>↑</b><b>←</b><b>→</b>Drive</span><span><b>SPACE</b>Hop, drift, trick off ramps</span><span><b>SHIFT</b>Turbo. Drifts, tricks and coins refill it</span><span><b>E</b>Use item</span><span><b>M</b>Mute</span></div>
+  <p class="kb" id="p-keys">P or ESC to resume · R to restart</p>
+  <div class="ctl tc"><span><b>DRAG</b>Steer</span><span><b>DRIFT</b>Hold in a turn, tap in the air</span><span><b>TURBO</b>Speed burst. Drift to refill</span><span><b>ITEM</b>Use item</span></div>
+  <div class="pbtns"><div id="p-resume">RESUME</div><div id="p-restart">RESTART</div><div id="p-menu">MAIN MENU</div><div id="p-sound">SOUND: ON</div></div></div>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

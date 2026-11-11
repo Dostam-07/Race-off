@@ -1,0 +1,17 @@
+{
+  "name": "Race-Off — Cartoon Kart Racing",
+  "short_name": "Race-Off",
+  "description": "Drift, boost and battle six animal racers across four tracks. Free browser kart racing — solo, Grand Prix, time trial or online multiplayer.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0a1436",
+  "theme_color": "#0a1436",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
