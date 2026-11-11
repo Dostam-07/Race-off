@@ -466,10 +466,20 @@ export class Kart {
     ];
   }
 
-  /** Apply a packed frame from another player. `t` is receive time, `lag` the buffer. */
+  /** Apply a packed frame from another player. `t` is receive time, `lag` the
+   *  half-RTT in seconds. The interpolation buffer adapts to measured jitter:
+   *  choppy arrival needs a deeper buffer, clean arrival a shallower one. */
   netApply(arr, t, lag) {
     const ns = this.ns || (this.ns = {});
     const flags = arr[6];
+    // Arrival jitter (EMA of |interval - 50ms|), seeded so early frames are
+    // conservative until the measurement settles.
+    if (this.netLast != null) {
+      const jit = Math.abs(t - this.netLast - 50);
+      this.netJit = this.netJit == null ? jit : this.netJit * 0.8 + jit * 0.2;
+    }
+    this.netLast = t;
+    ns.buf = clamp(lag + 2 * (this.netJit || 0) / 1000, 0.06, 0.4);
     ns.x = arr[0];
     ns.y = arr[1];
     ns.z = arr[2];
@@ -518,7 +528,7 @@ export class Kart {
     let idx = this.idx;
 
     if (ns) {
-      const ahead = Math.min(0.3, (performance.now() - ns.t) / 1000 + ns.lag);
+      const ahead = Math.min(0.5, (performance.now() - ns.t) / 1000 + (ns.buf || ns.lag));
       const tx = ns.x + Math.sin(ns.h) * ns.sp * ahead;
       const tz = ns.z + Math.cos(ns.h) * ns.sp * ahead;
 

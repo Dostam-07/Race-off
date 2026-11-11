@@ -6,7 +6,7 @@ const browser = await chromium.launch({
 
 const mk = async () => {
   const page = await browser.newPage({ viewport: { width: 900, height: 600 } });
-  page.on('pageerror', (e) => console.log('  [err]', e.message));
+  page.on('pageerror', (e) => (e.message || '').includes('ERR_CONNECTION_REFUSED') ? undefined : console.log('  [err]', e.message));
   return page;
 };
 
@@ -81,3 +81,4 @@ console.log('HOST race:', JSON.stringify(hRace));
 console.log('GUEST race:', JSON.stringify(gRace));
 
 await browser.close();
+

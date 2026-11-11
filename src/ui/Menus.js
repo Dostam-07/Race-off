@@ -8,6 +8,7 @@ import { $, formatTime } from '../core/utils.js';
 import { ROSTER, CHAR_TUNING, getUnlocks } from '../kart/KartModel.js';
 import { TRACK_ORDER } from '../tracks/definitions.js';
 import { dailyConfig, dailyFriendTime } from '../core/daily.js';
+import { dirAvailable, dirList } from '../net/directory.js';
 const STORE_RACER = 'ro-racer';
 
 export class Menus {
@@ -57,6 +58,13 @@ export class Menus {
     $('mp-new')?.addEventListener('click', () => {
       g.audio.resume();
       g.startMultiplayer();
+    });
+    $('m-quick')?.addEventListener('click', () => {
+      g.audio.resume();
+      g.quickMatch();
+    });
+    $('l-vis')?.addEventListener('click', () => {
+      if (g.mp && g.mp.isHost) g.setRoomPublic(!g.mp.isPublic);
     });
     $('l-invite')?.addEventListener('click', () => g.copyInvite());
     $('l-leave')?.addEventListener('click', () => g.leaveRoom());
@@ -248,7 +256,53 @@ export class Menus {
     $('lobby')?.classList.remove('on');
     $('modes')?.classList.add('on');
     $('mp')?.classList.add('on');
+    this.refreshRooms();
     this.game.fitUI();
+  }
+
+  /** Track name for the room list. */
+  trackLabel(id) {
+    const names = {
+      beach: 'BEACH', jungle: 'JUNGLE', desert: 'DESERT',
+      volcano: 'VOLCANO', snow: 'SNOW', sky: 'SKY',
+    };
+    return names[id] || (id || '').toUpperCase();
+  }
+
+  /** Refresh the public-room list under the mode buttons (every 6s). */
+  async refreshRooms() {
+    const host = document.getElementById('roomlist');
+    if (!host) return;
+    clearTimeout(this._roomsT);
+    host.innerHTML = '';
+    if (!this.visible() || !dirAvailable()) return;
+    const list = await dirList();
+    if (!list.length) return;
+    if (!this.visible()) return;
+    const cap = document.createElement('div');
+    cap.className = 'rl-h';
+    cap.textContent = 'OPEN ROOMS - PICK ONE';
+    host.appendChild(cap);
+    for (const r of list.slice(0, 6)) {
+      const row = document.createElement('div');
+      row.className = 'rl';
+      const code = document.createElement('b');
+      code.textContent = r.code;
+      const info = document.createElement('span');
+      info.textContent = (r.name ? r.name + ' \u00B7 ' : '') + r.players + '/6 \u00B7 ' +
+        this.trackLabel(r.level);
+      row.append(code, info);
+      row.addEventListener('pointerdown', (e) => {
+        e.stopPropagation();
+        this.game.joinRoom(r.code);
+      });
+      host.appendChild(row);
+    }
+    this._roomsT = setTimeout(() => this.refreshRooms(), 6000);
+  }
+
+  visible() {
+    return !document.body.classList.contains('solo') && !document.body.classList.contains('mp');
   }
 
   /** Push the chosen engine class / mirror flag into the live game. */

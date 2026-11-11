@@ -16,6 +16,7 @@
 //   left / bye / full   departures and room-full
 
 import Peer from 'peerjs';
+import { dirPublish, dirClose, dirLookup } from './directory.js';
 
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 export const ROOM_PREFIX = 'raceoff-cc-';
@@ -60,8 +61,14 @@ export const cleanName = (s) =>
 
 const RACER_MAX = 6;
 
+/** The emote wheel: six quick reactions, sent as tiny multiplayer events. */
+export const EMOTES = ['\u{1F44D}', '\u2764\uFE0F', '\u{1F602}', '\u{1F62E}', '\u{1F621}', '\u{1F389}'];
+
 /** A racer index must be an integer in [0, 6). */
 const isRacer = (n) => Number.isInteger(n) && n >= 0 && n < RACER_MAX;
+
+/** An emote wheel index. */
+const isEmote = (n) => Number.isInteger(n) && n >= 0 && n < EMOTES.length;
 
 /** Validate a score table ({racerIndex: points}). */
 const scoreTable = (s) => {
@@ -142,6 +149,10 @@ export class Net {
     this.tries = 0;
     this.gen = (opts.gen | 0) & 3;
     this.promoted = !!opts.promoted;
+    this.isPublic = !!opts.public;
+    this.pubT = 0;
+    this.pinGen = null;
+    this.pinMiss = 0;
     this.lost = null;
     this.miss = 0;
     this.probeN = opts.had ? 8 : 0;
@@ -156,6 +167,7 @@ export class Net {
     if (this.status !== s) {
       this.status = s;
       this.h.lobby();
+      if (s === 'open') dirPublish(this); // the room is listed as soon as it opens
     }
   }
 
@@ -258,8 +270,33 @@ export class Net {
     }
   }
 
-  /** Guests: open connections to every generation of the room id. */
+  /** Guests: open connections to every generation of the room id.
+   *  The companion directory (when reachable) tells us which generation is
+   *  live right now, so a room that migrated hosts is found first try. */
   dial() {
+    if (this.dead || this.isHost || this.batch) return;
+    const peer = this.peer;
+    if (!peer || peer.destroyed) return;
+    if (peer.disconnected) {
+      this.reopen(500);
+      return;
+    }
+    dirLookup(this.code).then((dir) => {
+      if (this.dead || this.batch || this.hostConn || !this.peer || this.peer.destroyed) return;
+      // Trust the directory only when the heartbeat is fresh (hosts publish
+      // every 10s) - a crashed host leaves a stale record behind.
+      const fresh = dir && Number.isInteger(dir.gen) && (dir.age | 0) < 12000;
+      if (fresh) {
+        this.pinGen = dir.gen & 3;
+        this.dialTargets([this.pinGen]);
+      } else {
+        this.pinGen = null;
+        this.dialTargets(null);
+      }
+    });
+  }
+
+  dialTargets(pinned) {
     const peer = this.peer;
     if (this.dead || !peer || peer.destroyed || this.isHost || this.batch) return;
     if (peer.disconnected) {
@@ -270,9 +307,11 @@ export class Net {
     this.rq = 0;
 
     const lost = this.lost;
-    const targets = lost
-      ? lost.alt ? [lost.to, (lost.to + 3) & 3] : [lost.to]
-      : [0, 1, 2, 3].map((r) => (this.gen + r) & 3);
+    const targets = pinned
+      ? pinned
+      : lost
+        ? lost.alt ? [lost.to, (lost.to + 3) & 3] : [lost.to]
+        : [0, 1, 2, 3].map((r) => (this.gen + r) & 3);
     const batch = (this.batch = { n: targets.length, bad: 0, cs: [] });
 
     batch.fail = () => {
@@ -287,6 +326,12 @@ export class Net {
         this.miss++;
         this.setStatus(this.lost ? 'away' : 'noroom');
         this.h.lobby();
+      }
+      // A pinned (directory-guided) dial that finds nobody twice in a row is
+      // chasing a stale record: fall back to sweeping every generation.
+      if (pinned && ++this.pinMiss >= 2) {
+        this.pinGen = null;
+        this.pinMiss = 0;
       }
       this.redial(this.lost ? 600 : 1500);
     };
@@ -381,6 +426,17 @@ export class Net {
     this.miss = 0;
     this.setStatus('away');
     this.h.lobby();
+    // The directory may know that another guest already took over: aim there
+    // instead of guessing the next generation and waiting out the timer. A
+    // stale record (crashed host that never said goodbye) is ignored.
+    dirLookup(this.code).then((r) => {
+      if (
+        this.lost && r && Number.isInteger(r.gen) &&
+        (r.age | 0) < 12000 && (r.gen & 3) !== this.gen
+      ) {
+        this.lost.to = r.gen & 3;
+      }
+    });
     this.redial(1500);
   }
 
@@ -400,6 +456,8 @@ export class Net {
       }
     } else if (msg.t === 'ev') {
       if (this.h.event(msg.ev, -1)) this.stats.evIn++;
+    } else if (msg.t === 'emote') {
+      if (isRacer(msg.by) && isEmote(msg.e) && this.h.emote) this.h.emote(msg.by, msg.e);
     } else if (msg.t === 'ping') {
       post(this.hostConn, { t: 'pong', n: msg.n });
       if (Number.isFinite(msg.rtt)) this.rtt = msg.rtt;
@@ -461,6 +519,29 @@ export class Net {
     } else if (msg.t === 'full') {
       this.dead = true;
       this.setStatus('full');
+    } else if (msg.t === 'spec') {
+      if (this.phase !== 'lobby' || !this.waiting || !Array.isArray(msg.grid)) return;
+      const grid = msg.grid;
+      if (
+        grid.length !== RACER_MAX ||
+        grid.slice().sort().join() !== '0,1,2,3,4,5' ||
+        !Array.isArray(msg.humans)
+      ) {
+        return;
+      }
+      const names = {};
+      for (const r of msg.humans) if (isRacer(r)) names[r] = cleanName(msg.names && msg.names[r]);
+      this.h.spec &&
+        this.h.spec({
+          grid,
+          humans: msg.humans.filter(isRacer),
+          names,
+          cc: Number.isFinite(msg.cc) ? msg.cc : 1,
+          mirror: !!msg.mirror,
+          level: typeof msg.level === 'string' ? msg.level : '',
+        });
+    } else if (msg.t === 'over') {
+      if (this.h.over) this.h.over();
     }
   }
 
@@ -509,6 +590,7 @@ export class Net {
       post(g.conn, { t: 'lobby', v, players: this.players, level: this.level, gp: this.gp });
     }
     this.h.lobby();
+    dirPublish(this); // keep the directory fresh when the roster changes
   }
 
   /** Tell every guest to leave the lobby for the chosen track. */
@@ -539,6 +621,12 @@ export class Net {
           if (other !== guest && !other.waiting) post(other.conn, { t: 'ev', ev });
         }
       }
+    } else if (msg.t === 'emote') {
+      if (!guest.ok || this.phase !== 'race' || !isEmote(msg.e)) return;
+      if (this.h.emote) this.h.emote(guest.racer, msg.e);
+      for (const other of this.guests.values()) {
+        if (other !== guest) post(other.conn, { t: 'emote', e: msg.e, by: guest.racer });
+      }
     } else if (msg.t === 'hello') {
       if (guest.ok) return;
       if (this.guests.size >= 5) {
@@ -566,6 +654,18 @@ export class Net {
       guest.waiting = this.phase !== 'lobby';
       this.guests.set(guest.pid, guest);
       this.sync();
+      // Joining mid-race: hand over the race setup so they can spectate.
+      if (guest.waiting && this.lastStart) {
+        post(guest.conn, {
+          t: 'spec',
+          grid: this.lastStart.grid,
+          humans: this.lastStart.humans,
+          names: this.lastStart.names,
+          cc: this.lastStart.cc,
+          mirror: this.lastStart.mirror,
+          level: this.level,
+        });
+      }
     } else if (msg.t === 'pick') {
       if (!guest.ok || this.phase !== 'lobby') return;
       guest.name = cleanName(msg.name);
@@ -612,6 +712,9 @@ export class Net {
     }
     const grid = [0, 1, 2, 3, 4, 5].filter((r) => !humans.includes(r)).concat(humans);
 
+    // Remember the race setup so late joiners can spectate it.
+    this.lastStart = { grid, humans, names, cc: opts.cc, mirror: !!opts.mirror };
+
     let worst = 0;
     for (const g of this.guests.values()) worst = Math.max(worst, Math.min(600, g.rtt));
     for (const g of this.guests.values()) {
@@ -648,6 +751,19 @@ export class Net {
     }
   }
 
+  /** Show an emote above my kart and relay it to everyone else. */
+  emote(e) {
+    if (this.dead || this.phase !== 'race' || !isEmote(e)) return;
+    if (this.isHost) {
+      if (this.h.emote) this.h.emote(this.me.racer, e);
+      for (const g of this.guests.values()) {
+        post(g.conn, { t: 'emote', e, by: this.me.racer });
+      }
+    } else {
+      post(this.hostConn, { t: 'emote', e });
+    }
+  }
+
   // -------------------------------------------------------------- keepalive
   tick() {
     if (this.dead) return;
@@ -662,6 +778,12 @@ export class Net {
           if (t - g.last > timeout) this.drop(g);
           else post(g.conn, { t: 'ping', n: t, rtt: g.rtt });
         }
+      }
+
+      // Heartbeat the companion directory every 10s while the room is open.
+      if (t - this.pubT > 10000) {
+        this.pubT = t;
+        dirPublish(this);
       }
 
       // When idle with no guests, check whether a newer generation took over.
@@ -718,7 +840,10 @@ export class Net {
         if (this.guests.size) {
           const all = this.h.all();
           for (const g of this.guests.values()) {
-            if (!g.waiting) post(g.conn, { t: 's', q, ks: all.filter((k) => k[0] !== g.racer) });
+            // Waiting guests spectate: they need every kart, including the
+            // CPU-driven copy of their own slot.
+            const ks = g.waiting ? all : all.filter((k) => k[0] !== g.racer);
+            post(g.conn, { t: 's', q, ks });
           }
         }
       } else {
@@ -727,9 +852,22 @@ export class Net {
     }
   }
 
+  /** Host: the race just ended. Everyone returns to the lobby, waiting
+   *  guests become regular racers for the next one. */
+  raceOver() {
+    if (!this.isHost || this.phase !== 'race') return;
+    this.phase = 'lobby';
+    for (const g of this.guests.values()) {
+      g.waiting = false;
+      post(g.conn, { t: 'over' });
+    }
+    this.sync();
+  }
+
   leave() {
     if (this.isHost) {
       for (const g of this.guests.values()) post(g.conn, { t: 'bye' });
+      dirClose(this.code); // take the room out of the directory
     }
     const peer = this.peer;
     this.dead = true;
@@ -742,6 +880,7 @@ export class Net {
 
   destroy() {
     this.dead = true;
+    if (this.isHost) dirClose(this.code); // take the room out of the directory
     try {
       if (this.peer) this.peer.destroy();
     } catch { /* ignore */ }

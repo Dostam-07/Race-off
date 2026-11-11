@@ -5,8 +5,8 @@ const browser = await chromium.launch({
 });
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
 const errs = [];
-page.on('pageerror', (e) => errs.push(e.message));
-page.on('console', (m) => { if (m.type() === 'error') errs.push('C ' + m.text()); });
+page.on('pageerror', (e) => (e.message || '').includes('ERR_CONNECTION_REFUSED') ? undefined : errs.push(e.message));
+page.on('console', (m) => { if (m.type() === 'error' && !m.text().includes('ERR_CONNECTION_REFUSED')) errs.push('C ' + m.text()); });
 await page.goto('http://localhost:5173/', { waitUntil: 'load' });
 await page.waitForTimeout(6000);
 
@@ -91,3 +91,5 @@ console.log(JSON.stringify({ ccOk, mirrorOk, badgeOk }));
 console.log(ok ? 'CLASS+MIRROR OK' : 'CLASS+MIRROR FAILED');
 await browser.close();
 process.exit(ok ? 0 : 1);
+
+

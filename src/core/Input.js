@@ -39,6 +39,7 @@ export class Input {
       }
       if (k === 'p' || k === 'Escape') g.onPauseKey();
       if (k === 'r' && g.state === 'race') g.restartRace();
+      if (k >= '1' && k <= '6') g.emitEmote(k.charCodeAt(0) - 49);
       if (k === 'Enter') g.menus.onEnter();
       g.menus.onKey(k);
     });

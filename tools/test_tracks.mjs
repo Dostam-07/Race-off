@@ -5,8 +5,8 @@ const browser = await chromium.launch({
 });
 const page = await browser.newPage({ viewport: { width: 960, height: 600 } });
 const errs = [];
-page.on('pageerror', (e) => errs.push('ERR ' + e.message + ' @' + (e.stack || '').split('\n')[1]));
-page.on('console', (m) => { if (m.type() === 'error') errs.push('C ' + m.text()); });
+page.on('pageerror', (e) => (e.message || '').includes('ERR_CONNECTION_REFUSED') ? undefined : errs.push('ERR ' + e.message + ' @' + (e.stack || '').split('\n')[1]));
+page.on('console', (m) => { if (m.type() === 'error' && !m.text().includes('ERR_CONNECTION_REFUSED')) errs.push('C ' + m.text()); });
 
 await page.goto('http://localhost:5173/', { waitUntil: 'load' });
 await page.waitForTimeout(6000);
@@ -59,3 +59,5 @@ await page.evaluate(() => window.__shot());
 await page.screenshot({ path: 'tools/race_' + track + '.png', timeout: 60000 });
 console.log('shot ok, errors:', errs.slice(0, 8).join('\n'));
 await browser.close();
+
+

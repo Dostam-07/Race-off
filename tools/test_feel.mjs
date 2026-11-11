@@ -5,7 +5,7 @@ const browser = await chromium.launch({
 });
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
 const errors = [];
-page.on('pageerror', (e) => errors.push(e.message));
+page.on('pageerror', (e) => (e.message || '').includes('ERR_CONNECTION_REFUSED') ? undefined : errors.push(e.message));
 await page.goto('http://localhost:5173/', { waitUntil: 'load' });
 await page.waitForTimeout(7000);
 
@@ -89,3 +89,4 @@ console.log(JSON.stringify({ blipsOk, uniq, skidOk, dopOk }));
 console.log(ok ? 'AUDIO FEEL OK' : 'AUDIO FEEL FAILED');
 await browser.close();
 process.exit(ok ? 0 : 1);
+

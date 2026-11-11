@@ -166,6 +166,28 @@ broadcasts 20 snapshots/second; item events are relayed so everyone sees the
 same rockets and traps. If the host disconnects, the next player is promoted
 and the room re-hosts itself — the race goes on.
 
+### Phase 3 — robust multiplayer
+
+- **Emote wheel & chat pings** — tap the 💬 button (or keys **1–6**) to send
+  👍 ❤️ 😂 😨 😡 🎉 above your kart; everyone sees them, rate-limited to one
+  per 1.2s.
+- **Spectator mode** — joining a room mid-race drops you into the live race
+  as a spectator: every kart is relayed to you, the camera follows the field
+  (cycle karts with ←/→), and you sit in the lobby for the next race
+  automatically when it ends.
+- **Adaptive interpolation** — the remote-kart buffer grows with measured
+  jitter (`lag + 2×jitter`, clamped 60–400ms) so laggy players stay smooth
+  without adding delay for everyone.
+- **Room directory & quick match** — an optional tiny companion server
+  (`node companion/server.mjs`, zero dependencies) keeps a live list of
+  public rooms. Hosts can flip their room **PUBLIC** (listed, joinable via
+  **QUICK MATCH**) or keep it invite-only; the directory also tells joining
+  clients which room generation is live after a host migration, and a stale
+  host entry is detected and ignored. Everything degrades gracefully when it
+  is not running.
+- **Grand Prix rooms survive reloads** — room cups persist points between
+  races and every player follows the host to the next track automatically.
+
 ## 🛠️ Project layout
 
 ```
@@ -207,6 +229,7 @@ src/
     icons.js            renders the item/driver/trophy icons to data URLs
   net/
     Net.js              PeerJS transport: rooms, relay, keepalive, host handover
+    directory.js        companion-directory client (public rooms, quick match)
     Multiplayer.js      lobby UI + wiring the transport into the game
   styles/game.css       all styling, responsive rules and HUD skin
 tools/                  asset extraction + headless Playwright test scripts
@@ -260,6 +283,10 @@ node tools/test_unlocks.mjs   # GP win -> champion livery + picker badge
 node tools/test_pwa.mjs       # manifest, icons, service worker (preview build)
 node tools/test_spacing.mjs   # 600-frame race, asserts no kart overlap
 node tools/test_mp.mjs        # host + guest in two pages
+node tools/test_interp.mjs    # snapshot interpolation + adaptive jitter buffer
+node tools/test_emotes.mjs    # emote wheel: relay, self-show, rate limit
+node tools/test_spectate.mjs  # late joiner spectates, then races the next one
+node tools/test_directory.mjs # companion directory: list, quick match, migration
 node tools/audit_ui.mjs       # UI overlap/offscreen audit, 8 viewports x 5 screens
 ```
 

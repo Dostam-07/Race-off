@@ -4,7 +4,7 @@ const browser = await chromium.launch({
   args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
 });
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
-page.on('pageerror', (e) => console.log('[pageerror]', e.message));
+page.on('pageerror', (e) => (e.message || '').includes('ERR_CONNECTION_REFUSED') ? undefined : console.log('[pageerror]', e.message));
 await page.goto('http://localhost:5173/', { waitUntil: 'load' });
 await page.waitForTimeout(6000);
 
@@ -46,3 +46,4 @@ console.log(
     : 'STEERING WRONG',
 );
 await browser.close();
+

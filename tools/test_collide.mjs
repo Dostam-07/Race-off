@@ -4,9 +4,9 @@ const browser = await chromium.launch({
   args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
 });
 const page = await browser.newPage({ viewport: { width: 960, height: 600 } });
-page.on('pageerror', (e) => console.log('[err]', e.message));
+page.on('pageerror', (e) => (e.message || '').includes('ERR_CONNECTION_REFUSED') ? undefined : console.log('[err]', e.message));
 await page.goto('http://localhost:5173/', { waitUntil: 'load' });
-page.on('pageerror', (e) => console.log('[err2]', e.message));
+page.on('pageerror', (e) => (e.message || '').includes('ERR_CONNECTION_REFUSED') ? undefined : console.log('[err2]', e.message));
 await page.waitForTimeout(7000);
 
 const result = await page.evaluate(() => {
@@ -55,3 +55,4 @@ const result = await page.evaluate(() => {
 });
 console.log(JSON.stringify(result));
 await browser.close();
+

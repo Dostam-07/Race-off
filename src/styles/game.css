@@ -87,6 +87,14 @@ body.mp .hint, body.touch .hint { display: none; }
 @keyframes nudge { 50% { transform: scale(1.05); } }
 .mbtn.multi { background: linear-gradient(180deg, #ff6a8f, #ff3b6b); }
 .mbtn.daily { background: linear-gradient(180deg, #a0e8ff, #3aa0ff 55%, #1a6ad0); }
+.mbtn.quick { background: linear-gradient(180deg, #b6ff9a, #4fd42a 55%, #2a9e12); }
+#roomlist { margin-top: 2.2vw; display: flex; flex-direction: column; gap: 10px; align-items: center; }
+#roomlist:empty { display: none; }
+#roomlist .rl-h { font-size: 12px; letter-spacing: 3px; opacity: .75; }
+#roomlist .rl { display: flex; align-items: center; gap: 14px; padding: 8px 16px; border-radius: 24px; border: 3px solid #fff; background: rgba(8,16,50,.55); box-shadow: 0 4px 0 rgba(8,16,50,.6); cursor: pointer; }
+#roomlist .rl:hover { transform: translateY(-2px); }
+#roomlist .rl b { font-size: 22px; letter-spacing: 4px; color: #ffe14a; font-style: italic; }
+#roomlist .rl span { font-size: 13px; letter-spacing: 1px; }
 .lrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; }
 #l-room { font-size: 14px; letter-spacing: 2px; } #l-code { font-size: 26px; color: #ffe14a; letter-spacing: 4px; margin-left: 6px; font-style: italic; }
 #l-name { font: inherit; font-size: 16px; letter-spacing: 2px; width: 156px; padding: 8px 10px 6px; border-radius: 20px; border: 3px solid #fff; background: #fff; color: var(--ink); text-align: center; user-select: text; -webkit-user-select: text; outline: none; touch-action: manipulation; }
@@ -145,6 +153,18 @@ body.mp .hint, body.touch .hint { display: none; }
 #warn { position: absolute; left: 50%; bottom: 31%; width: 92px; height: 92px; margin-left: -46px; border-radius: 50%; background: #ff2f45; border: 6px solid #fff; box-shadow: 0 0 30px rgba(255,40,60,.8); display: none; align-items: center; justify-content: center; font-size: 62px; font-weight: 900; font-style: italic; }
 #warn.on { display: flex; animation: blink .28s steps(2) infinite; }
 @keyframes blink { 50% { opacity: .35; } }
+
+/* Emote wheel: multiplayer races only. */
+#ewheel { position: absolute; right: 26px; bottom: 26px; display: none; z-index: 30; pointer-events: auto; }
+body.mp #ewheel { display: block; }
+#ewheel-btn { width: 64px; height: 64px; border-radius: 50%; border: 4px solid #fff; background: rgba(8,16,50,.72); box-shadow: 0 5px 0 rgba(8,16,50,.6); display: flex; align-items: center; justify-content: center; font-size: 30px; cursor: pointer; user-select: none; }
+#ewheel-btn:active { transform: translateY(2px); box-shadow: 0 3px 0 rgba(8,16,50,.6); }
+#ewheel-grid { position: absolute; right: 6px; bottom: 76px; display: none; grid-template-columns: repeat(2, 58px); gap: 10px; padding: 12px; border-radius: 22px; border: 3px solid #fff; background: rgba(8,16,50,.82); box-shadow: 0 5px 0 rgba(8,16,50,.6); }
+#ewheel.open #ewheel-grid { display: grid; }
+#ewheel-grid div { width: 58px; height: 58px; border-radius: 50%; border: 3px solid rgba(255,255,255,.55); background: rgba(255,255,255,.12); display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; user-select: none; }
+#ewheel-grid div:hover { background: rgba(255,255,255,.28); transform: scale(1.1); }
+#ewheel-grid div i { font-style: normal; font-size: 11px; font-weight: 900; color: #ffe14a; position: absolute; transform: translate(20px, 20px); }
+#ewheel-grid div { position: relative; }
 .tag { position: absolute; left: 0; top: 0; display: none; align-items: center; gap: 5px; padding: 3px 11px 3px 4px; border-radius: 16px; background: rgba(8,16,50,.72); border: 2px solid var(--c); font-size: 16px; white-space: nowrap; transform-origin: 50% 100%; will-change: transform; }
 .tag b { background: var(--c); color: #fff; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-style: italic; text-shadow: 0 1px 0 rgba(0,0,0,.5); }
 .tag i { font-style: normal; font-size: 30px; position: absolute; left: 50%; top: -40px; transform: translateX(-50%); }

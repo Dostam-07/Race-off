@@ -5,7 +5,7 @@ const browser = await chromium.launch({
 });
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
 const errors = [];
-page.on('pageerror', (e) => errors.push(e.message));
+page.on('pageerror', (e) => (e.message || '').includes('ERR_CONNECTION_REFUSED') ? undefined : errors.push(e.message));
 await page.goto('http://localhost:4173/', { waitUntil: 'load' });
 await page.waitForTimeout(8000);
 
@@ -61,3 +61,4 @@ const ok =
 console.log(ok ? 'PWA PREVIEW OK' : 'PWA PREVIEW FAILED');
 await browser.close();
 process.exit(ok ? 0 : 1);
+

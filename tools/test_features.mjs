@@ -4,7 +4,7 @@ const browser = await chromium.launch({
 });
 const page = await browser.newPage({ viewport: { width: 960, height: 600 } });
 const errs = [];
-page.on('pageerror', (e) => errs.push('ERR ' + e.message + ' @' + (e.stack || '').split('\n')[1]));
+page.on('pageerror', (e) => (e.message || '').includes('ERR_CONNECTION_REFUSED') ? undefined : errs.push('ERR ' + e.message + ' @' + (e.stack || '').split('\n')[1]));
 await page.goto('http://localhost:5173/', { waitUntil: 'load' });
 await page.waitForTimeout(6000);
 await page.evaluate(() => {
@@ -94,3 +94,4 @@ out.hud = await page.evaluate(() => ({
 console.log(JSON.stringify(out, null, 1));
 console.log('ERRORS', errs.slice(0, 8).join('\n'));
 await browser.close();
+

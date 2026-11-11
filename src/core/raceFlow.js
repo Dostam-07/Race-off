@@ -11,6 +11,7 @@ import { Kart } from '../kart/Kart.js';
 import { addUnlock } from '../kart/KartModel.js';
 import { Ghost, loadGhost, saveGhost, REC_EVERY, MAX_SAMPLES, REC_DT } from '../kart/Ghost.js';
 import { dailyConfig, dailyResult, dailySave, dailySaveStarted, dailyRng, dailyFriendTime } from './daily.js';
+import { STORE, sset } from '../net/Multiplayer.js';
 
 export const GRID = 6;
 export const POINTS = [15, 12, 10, 8, 6, 4];
@@ -344,6 +345,9 @@ const raceFlow = {
   showResults() {
     this.setState('done');
     this.fitUI(); // the panel scales to the viewport
+    // The race is over: free the room's phase so the host can start the next
+    // race, waiting guests become racers again, spectators return to the lobby.
+    if (this.mp && this.mp.isHost && !this.mp.dead) this.mp.raceOver();
     const cup = this.cup;
     if (cup) {
       for (const k of this.karts) {
@@ -352,6 +356,13 @@ const raceFlow = {
         cup.pts[k.def.id] = (cup.pts[k.def.id] || 0) + gain;
       }
       cup.final = cup.race >= cup.total;
+      // Persist the room cup state so the reload between races keeps score.
+      if (cup.room && this.mp && this.mp.isHost && !this.mp.dead) {
+        sset(STORE.mgp, JSON.stringify({
+          code: this.mp.code,
+          gp: cup.final ? { i: 0, pts: {} } : { i: cup.race, pts: cup.pts },
+        }));
+      }
       // Grand Prix champion: the winner's racer earns the gold rim livery.
       if (cup.final) {
         const best = Object.keys(cup.pts).reduce((a, b) => (cup.pts[b] > cup.pts[a] ? b : a));
@@ -375,7 +386,23 @@ const raceFlow = {
 
   raceAgain() {
     if (this.cup) {
-      if (this.cup.race < this.cup.total) return this.startCupRace();
+      if (this.cup.race < this.cup.total) {
+        // Room Grand Prix: everyone reloads into the next track (a reload
+        // resets the netcode cleanly), then the host starts the next race.
+        if (this.cup.room && this.mp && this.mp.isHost && !this.mp.dead) {
+          const next = this.cup.order[this.cup.race];
+          this.mp.go(next);
+          setTimeout(() => {
+            try {
+              const p = new URLSearchParams(location.search);
+              p.set('level', next);
+              location.replace(location.href.split(/[?#]/)[0] + '?' + p.toString());
+            } catch { /* sandboxed - stay put */ }
+          }, 350);
+          return;
+        }
+        return this.startCupRace();
+      }
       this.cup = null;
     }
     this.startSolo();

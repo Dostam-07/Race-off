@@ -8,6 +8,7 @@
 import * as THREE from 'three';
 import { clamp, formatTime } from '../core/utils.js';
 import { ITEM_NAMES } from '../items/Items.js';
+import { EMOTES } from '../net/Net.js';
 
 const $ = (id) => document.getElementById(id);
 const SUFFIX = ['st', 'nd', 'rd', 'th', 'th', 'th'];
@@ -29,6 +30,31 @@ export class HUD {
     this._time = '';
     this._board = '';
     this.rowsEl = $('board');
+
+    // Emote wheel (multiplayer races): a speech-balloon button opening a grid
+    // of quick reactions; keys 1-6 work too.
+    const ew = $('ewheel');
+    if (ew) {
+      const grid = $('ewheel-grid');
+      grid.innerHTML = '';
+      EMOTES.forEach((e, i) => {
+        const b = document.createElement('div');
+        b.textContent = e;
+        const key = document.createElement('i');
+        key.textContent = i + 1;
+        b.appendChild(key);
+        b.addEventListener('pointerdown', (ev) => {
+          ev.stopPropagation();
+          this.game?.emitEmote(i);
+          ew.classList.remove('open');
+        });
+        grid.appendChild(b);
+      });
+      $('ewheel-btn').addEventListener('pointerdown', (ev) => {
+        ev.stopPropagation();
+        ew.classList.toggle('open');
+      });
+    }
 
     // Position board rows, one per racer.
     for (const r of racers) {

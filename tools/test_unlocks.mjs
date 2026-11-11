@@ -5,7 +5,7 @@ const browser = await chromium.launch({
 });
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
 const errs = [];
-page.on('pageerror', (e) => errs.push(e.message));
+page.on('pageerror', (e) => (e.message || '').includes('ERR_CONNECTION_REFUSED') ? undefined : errs.push(e.message));
 await page.goto('http://localhost:5173/', { waitUntil: 'load' });
 await page.waitForTimeout(6000);
 
@@ -86,3 +86,4 @@ const ok =
 console.log(ok ? 'UNLOCKS OK' : 'UNLOCKS FAILED');
 await browser.close();
 process.exit(ok ? 0 : 1);
+

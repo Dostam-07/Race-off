@@ -71,6 +71,16 @@ const loopMethods = {
     // ---- input
     this.input.pollGamepad();
     this.input.applyTo(player);
+    // Spectators cycle the follow camera with left/right.
+    if (this.spectating && this.specKart) {
+      const dir = this.input.pressed.has('ArrowRight') ? 1 : this.input.pressed.has('ArrowLeft') ? -1 : 0;
+      if (dir && this.karts.length > 1) {
+        const i = this.karts.indexOf(this.specKart);
+        this.specKart = this.karts[(i + dir + this.karts.length) % this.karts.length];
+        const nm = this.hud.names[this.specKart.def.id] || this.specKart.def.name;
+        this.hud.toast('FOLLOWING ' + nm.toUpperCase(), '', 1.2);
+      }
+    }
     if (!racing) {
       const r = player.input;
       r.steer = 0;
@@ -85,7 +95,24 @@ const loopMethods = {
     if (this.state === 'finish' && this.st > 3.6) this.showResults();
 
     // ---- karts
-    for (const k of this.karts) k.update(dt, active);
+    // While hosting, the rubber-band baseline is the average human progress.
+    if (this.mp && this.mp.isHost && !this.mp.dead) {
+      let sum = 0;
+      let n = 0;
+      for (const k of this.karts) {
+        if (k.human && !k.finished) {
+          sum += k.progress;
+          n++;
+        }
+      }
+      this.bandP = n ? sum / n : undefined;
+    }
+    // Remote karts never run local physics: their owner simulates them and we
+    // interpolate toward the snapshots as they arrive.
+    for (const k of this.karts) {
+      if (k.remote) k.remoteUpdate(dt, active);
+      else k.update(dt, active);
+    }
     collideKarts(this.karts);
     if (this.bumpCd > 0) this.bumpCd -= dt;
 
@@ -180,15 +207,18 @@ const loopMethods = {
     if (this.terrain) this.terrain.update(this.time);
     if (this.terrainMat?.uniforms?.uTime) this.terrainMat.uniforms.uTime.value = this.time;
 
-    // Keep the shadow volume around the player wherever they are on the track.
-    this.sun.target.position.set(player.x, player.y, player.z);
-    this.sun.position.set(player.x + 38, player.y + 62, player.z + 26);
+    // The camera follows the player - or the kart a spectator is watching.
+    const camTarget = this.spectating && this.specKart ? this.specKart : player;
+
+    // Keep the shadow volume around the followed kart wherever it is.
+    this.sun.target.position.set(camTarget.x, camTarget.y, camTarget.z);
+    this.sun.position.set(camTarget.x + 38, camTarget.y + 62, camTarget.z + 26);
     this.sun.target.updateMatrixWorld();
 
     this.boostKick = damp(this.boostKick, player.boost > 0 ? 1 : 0, player.boost > 0 ? 8 : 3, dt);
 
-    // ---- camera
-    this.cameraRig.update(dt, this.state, this.st, player, this.track);
+    // ---- camera (spectators can cycle through the field with left/right)
+    this.cameraRig.update(dt, this.state, this.st, camTarget, this.track);
 
     // ---- HUD
     this.hud.nameTags(this.karts, this.camera, this.state === 'race');

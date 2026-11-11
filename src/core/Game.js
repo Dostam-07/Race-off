@@ -185,7 +185,9 @@ export class Game {
 
   /** Stable integer id for a kart, used by item events and networking. */
   rid(kart) {
-    return this.karts.indexOf(kart);
+    // Network ids are ROSTER slots (stable across all clients), not array
+    // indexes: the field order depends on who the local player picked.
+    return ROSTER.findIndex((r) => r.id === kart.def.id);
   }
 
   async boot(onProgress) {
@@ -196,6 +198,7 @@ export class Game {
 
     this.menus = new Menus(this);
     this.hud = new HUD(this.icons, ROSTER);
+    this.hud.game = this;
 
     // The title screen immediately needs a track to stand on.
     this.loadTrack('beach', { mode: 'title' });

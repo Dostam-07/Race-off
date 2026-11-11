@@ -20,3 +20,7 @@ tools/crop_*.jpg
 tools/shot_small.jpg
 tools/probe_*.png
 docs/*.jpg
+
+# one-off debug scripts + directory runtime snapshot
+tools/dbg_*.mjs
+companion/rooms.json

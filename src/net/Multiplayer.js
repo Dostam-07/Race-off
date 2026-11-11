@@ -8,17 +8,19 @@
 // The room lives in the URL as ?room=CODE&level=beach so an invite link is
 // just a copy of the address bar.
 
-import { Net, makeCode, cleanCode, cleanName, ROOM_PREFIX } from './Net.js';
+import { Net, makeCode, cleanCode, cleanName, ROOM_PREFIX, EMOTES } from './Net.js';
+import { dirAvailable, dirQuick, dirList, dirPublish } from './directory.js';
 import { ROSTER } from '../kart/KartModel.js';
 import { TRACK_ORDER, TRACKS } from '../tracks/definitions.js';
 
-const STORE = {
+export const STORE = {
   host: 'ro-host',
   had: 'ro-had',
   mgp: 'ro-mgp',
   gen: 'ro-gen',
   heir: 'ro-heir',
   name: 'ro-name',
+  pub: 'ro-mpub',
 };
 
 const sget = (k) => {
@@ -28,7 +30,7 @@ const sget = (k) => {
     return null;
   }
 };
-const sset = (k, v) => {
+export const sset = (k, v) => {
   try {
     if (v === null) sessionStorage.removeItem(k);
     else sessionStorage.setItem(k, v);
@@ -62,16 +64,49 @@ export function setRoomUrl(code, level) {
 
 export function installMultiplayer(GameClass) {
   Object.assign(GameClass.prototype, mpMethods);
+  // The original tears the room down when the tab goes away - this also
+  // removes hosted rooms from the companion directory.
+  addEventListener('pagehide', () => {
+    try {
+      if (window.game?.mp) window.game.mp.destroy();
+    } catch { /* ignore */ }
+  });
 }
 
 const mpMethods = {
   // ------------------------------------------------------------- entry points
   /** Host a fresh room. */
-  startMultiplayer() {
+  startMultiplayer(isPublic = false) {
     if (this.mp || this.state !== 'title') return;
     const code = makeCode();
     for (const k of [STORE.mgp, STORE.gen, STORE.heir, STORE.had]) sset(k, null);
-    this.openRoom(code, { host: true, rehost: false });
+    this.openRoom(code, { host: true, rehost: false, public: isPublic });
+  },
+
+  /** Quick match: join the fullest open public room, else host one. */
+  async quickMatch() {
+    if (this.mp || this.state !== 'title') return;
+    this.hud.toast('LOOKING FOR A RACE\u2026', 'cyan', 2);
+    const r = dirAvailable() ? await dirQuick() : null;
+    if (r && r.code) {
+      this.hud.toast('FOUND A ROOM! JOINING\u2026', 'gold', 2);
+      this.joinRoom(r.code);
+    } else {
+      this.hud.toast('NO OPEN ROOMS - HOSTING ONE', 'gold', 2.5);
+      this.startMultiplayer(true);
+    }
+  },
+
+  /** Host: flip the room between public (listed) and invite-only. */
+  setRoomPublic(v) {
+    const mp = this.mp;
+    if (!mp || !mp.isHost) return;
+    mp.isPublic = !!v;
+    try {
+      localStorage.setItem(STORE.pub, v ? '1' : '0');
+    } catch { /* private mode */ }
+    dirPublish(mp);
+    this.renderLobby();
   },
 
   /** Join an existing room by code (from the URL or typed in). */
@@ -124,6 +159,15 @@ const mpMethods = {
         server: url.server,
         lag: url.lag,
         level: this.track.def.id,
+        public:
+          !!opts.public ||
+          (() => {
+            try {
+              return localStorage.getItem(STORE.pub) === '1';
+            } catch {
+              return false;
+            }
+          })(),
       },
       this.netHooks(code),
     );
@@ -205,6 +249,14 @@ const mpMethods = {
       // The host pressed START: build the grid after the sync delay.
       start: (info, delay) => setTimeout(() => this.startNetRace(info), delay),
 
+      // Joining mid-race: watch the current race as a spectator.
+      spec: (info) => this.startNetSpectate(info),
+
+      // The host's race just ended: spectators return to the lobby.
+      over: () => {
+        if (this.spectating) this.endSpectate();
+      },
+
       // A remote snapshot arrived for roster slot `racer`.
       state: (racer, arr, lag) => {
         const kart = this.kartOf(racer);
@@ -234,6 +286,18 @@ const mpMethods = {
         if (racing) this.hud.toast(names[kart.def.id] + ' LEFT', '', 1.6);
         delete names[kart.def.id];
         this.hud.setNames(names);
+      },
+
+      // An emote from another player (or my own echo on the host).
+      emote: (racer, e) => {
+        const kart = this.kartOf(racer);
+        const racing = this.state === 'race' || this.state === 'finish' || this.state === 'intro';
+        if (!kart || !racing || !EMOTES[e]) return;
+        kart.say(EMOTES[e], 1.6);
+        if (kart !== this.player) {
+          const d = Math.hypot(kart.x - this.player.x, kart.z - this.player.z);
+          if (d < 40) this.audio.sfx('pop', 0.5);
+        }
       },
 
       // The host disappeared mid-race: everyone's kart goes back to the CPU.
@@ -337,6 +401,15 @@ const mpMethods = {
 
     const status = document.getElementById('l-status');
     if (status) status.textContent = this.lobbyStatus();
+
+    // Privacy chip (host only, meaningful only with a directory around).
+    const vis = document.getElementById('l-vis');
+    if (vis) {
+      const on = !!mp.isPublic;
+      vis.textContent = on ? 'PUBLIC ROOM' : 'PRIVATE ROOM';
+      vis.classList.toggle('on', on);
+      vis.style.display = mp.isHost && dirAvailable() ? '' : 'none';
+    }
   },
 
   lobbyStatus() {
@@ -400,6 +473,8 @@ const mpMethods = {
     // Make sure I am driving the racer the host assigned me.
     if (this.rid(this.player) !== mp.me.racer) this.menus.select(mp.me.racer, true);
 
+    this.spectating = false;
+    this.specKart = null;
     // A full six-kart field; humans drive their slots, the CPU fills the rest.
     this.buildField(this.pickChar(), 5);
 
@@ -426,9 +501,86 @@ const mpMethods = {
     this.beginIntro();
   },
 
+  /** Watch the race that is already running (late joiners). Every kart is
+   *  remote-driven; the camera follows the slot the host assigned me. */
+  startNetSpectate(info) {
+    const mp = this.mp;
+    if (!mp || this.state !== 'title') return;
+    if (info.level && TRACKS[info.level] && info.level !== this.track.def.id) {
+      // The room moved to another track mid-race; follow it.
+      setRoomUrl(mp.code, info.level);
+      location.replace(location.href);
+      return;
+    }
+    this.timeTrial = false;
+    this.noItems = false;
+    if (Number.isFinite(info.cc)) this.cc = info.cc;
+    this.mirror = !!info.mirror;
+
+    if (this.rid(this.player) !== mp.me.racer) this.menus.select(mp.me.racer, true);
+    this.buildField(this.pickChar(), 5);
+    info.grid.forEach((racer, slot) => {
+      const kart = this.kartOf(racer);
+      if (!kart) return;
+      kart.place(slot);
+      kart.human = info.humans.includes(racer);
+      kart.remote = true; // spectators drive nothing
+      kart.sync(0);
+    });
+    this.spectating = true;
+    this.specKart = this.player;
+
+    const names = {};
+    for (const r of info.humans) names[ROSTER[r].id] = info.names[r] || ROSTER[r].name;
+    this.hud.setNames(names);
+
+    this.menus.hideAll();
+    this.audio.init(this.track.def.id);
+    this.audio.resume();
+    this.audio.stopTitle();
+    this.audio.startMusic(this.track.def.id);
+    this.setState('race'); // no countdown - the race is already underway
+    this.raceTime = 0;
+    this.lapStart = 0;
+    this.hud.show(true);
+    this.hud.setLap(1);
+    this.hud.setMode(this.cc, this.mirror);
+    this.hud.buildBoard?.(this.ranked);
+    this.cameraRig.reset();
+    this.hud.banner('SPECTATING', 'cyan', 2.5);
+    this.hud.toast('WATCHING THE RACE - YOU ARE IN THE NEXT ONE', 'cyan', 3);
+  },
+
+  /** Leave spectator view and sit in the lobby for the next race. */
+  endSpectate() {
+    if (!this.spectating) return;
+    this.spectating = false;
+    this.specKart = null;
+    this.setState('title');
+    this.hud.show(false);
+    this.audio.stopMusic();
+    this.audio.startTitle();
+    this.loadTrack(this.currentTrackId || 'beach', { mode: 'title' });
+    this.menus.showLobby(); // after loadTrack - it resets the screens
+  },
+
+  /** Show an emote above my kart and relay it (multiplayer only). */
+  emitEmote(i) {
+    const mp = this.mp;
+    if (!mp || mp.dead || mp.phase !== 'race' || !EMOTES[i]) return;
+    if (!this.player || (this.state !== 'race' && this.state !== 'intro')) return;
+    const t = performance.now();
+    if (t - (this.emoteT0 || 0) < 1200) return;
+    this.emoteT0 = t;
+    this.player.say(EMOTES[i], 1.6); // show it on my own kart too - my
+    mp.emote(i);                    // snapshots then carry it to everyone
+  },
+
   /** Leave the room and go back to the single-player menus. */
   leaveRoom() {
     if (!this.mp || this.state !== 'title') return;
+    this.spectating = false;
+    this.specKart = null;
     this.mp.leave();
     this.mp = null;
     document.body.classList.remove('mp');

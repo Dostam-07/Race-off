@@ -4,8 +4,8 @@ const browser = await chromium.launch({
 });
 const page = await browser.newPage({ viewport: { width: 1280, height: 760 } });
 const errs = [];
-page.on('pageerror', (e) => errs.push('ERR ' + e.message));
-page.on('console', (m) => { if (m.type() === 'error') errs.push('C ' + m.text()); });
+page.on('pageerror', (e) => (e.message || '').includes('ERR_CONNECTION_REFUSED') ? undefined : errs.push('ERR ' + e.message));
+page.on('console', (m) => { if (m.type() === 'error' && !m.text().includes('ERR_CONNECTION_REFUSED')) errs.push('C ' + m.text()); });
 await page.goto('http://localhost:5173/', { waitUntil: 'load' });
 await page.waitForTimeout(9000);
 
@@ -27,3 +27,5 @@ console.log(JSON.stringify(info, null, 1));
 console.log('ERRORS', errs.slice(0, 6).join('\n'));
 await page.screenshot({ path: 'tools/title_new.png', timeout: 60000 });
 await browser.close();
+
+
