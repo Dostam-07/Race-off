@@ -1,0 +1,30 @@
+# Netlify configuration for Race-Off.
+#
+# The site is fully static (dist/) plus one serverless function that provides
+# the companion API (public rooms, quick match, leaderboards, analytics
+# funnel) over same-origin /companion-api/* - the game client targets that
+# path automatically when it is not running on localhost.
+
+[build]
+  command = "npx vite build"
+  publish = "dist"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# Long-cache the hashed build assets; never cache the shell or PWA files.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    cache-control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    cache-control = "no-cache"
+
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    cache-control = "no-cache"

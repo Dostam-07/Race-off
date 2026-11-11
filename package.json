@@ -10,6 +10,7 @@
     "preview": "vite preview --host"
   },
   "dependencies": {
+    "@netlify/blobs": "^11.1.9",
     "peerjs": "^1.5.4",
     "three": "^0.187.0"
   },

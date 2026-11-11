@@ -1,0 +1,8 @@
+Ticket ID: 62e6ee48cefe48c5ac8c110abedf044d
+Authorize URL: https://app.netlify.com/authorize?response_type=ticket&ticket=62e6ee48cefe48c5ac8c110abedf044d&utm_source=cli&utm_campaign=integrations
+
+After authorizing, run: netlify login --check 62e6ee48cefe48c5ac8c110abedf044d
+
+After user opens the authorization URL and approves, the login will be complete.
+
+TICKET: 62e6ee48cefe48c5ac8c110abedf044d
