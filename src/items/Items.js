@@ -240,9 +240,11 @@ export class Items {
     }[kart.rank] || { chili: 1 };
 
     if (!kart.isPlayer && table.bolt) table.bolt *= 0.4;
+    // Daily challenge: the roulette is seeded, so everyone gets the same rolls.
+    const rng = this.game.daily ? this.game.rnd : Math.random;
     let total = 0;
     for (const k in table) total += table[k];
-    let roll = Math.random() * total;
+    let roll = rng() * total;
     for (const k in table) {
       roll -= table[k];
       if (roll <= 0) return k;
@@ -526,7 +528,7 @@ export class Items {
         k.roll -= dt;
         if (k.roll <= 0) {
           k.item = this.pick(k);
-          k.itemHold = 1 + Math.random() * 4;
+          k.itemHold = 1 + (this.game.daily ? this.game.rnd() : Math.random()) * 4;
           if (k.isPlayer) {
             g.hud.setItem(k.item);
             g.audio.sfx('itemget');

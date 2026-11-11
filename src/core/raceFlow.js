@@ -8,7 +8,9 @@ import { clamp, lerp, damp, formatTime, ordinal } from '../core/utils.js';
 import { ROSTER, CHAR_TUNING } from '../kart/KartModel.js';
 import { TRACK_ORDER, TRACKS } from '../tracks/definitions.js';
 import { Kart } from '../kart/Kart.js';
+import { addUnlock } from '../kart/KartModel.js';
 import { Ghost, loadGhost, saveGhost, REC_EVERY, MAX_SAMPLES, REC_DT } from '../kart/Ghost.js';
+import { dailyConfig, dailyResult, dailySave, dailySaveStarted, dailyRng, dailyFriendTime } from './daily.js';
 
 export const GRID = 6;
 export const POINTS = [15, 12, 10, 8, 6, 4];
@@ -59,6 +61,7 @@ const raceFlow = {
     this.finishT = 0;
     this.hud.setLap(1);
     this.hud.setTime(0);
+    this.hud.setMode(this.cc, this.mirror);
     this.hud.setCoins(0);
     this.hud.setItem(null);
     this.hud.setTurbo(0);
@@ -88,6 +91,7 @@ const raceFlow = {
   startSolo(trackId) {
     this.audio.resume();
     this.cup = null;
+    this.daily = null;
     this.timeTrial = false;
     this.noItems = false;
     const id = trackId || this.currentTrackId || 'beach';
@@ -101,6 +105,7 @@ const raceFlow = {
   startTimeTrial(trackId) {
     this.audio.resume();
     this.cup = null;
+    this.daily = null;
     this.timeTrial = true;
     this.noItems = true; // must be set before loadTrack - Items builds there
     const id = trackId || this.currentTrackId || 'beach';
@@ -108,6 +113,42 @@ const raceFlow = {
     this.loadTrack(id);
     this.buildField(this.pickChar(), 0);
     this.beginIntro();
+  },
+
+  /** Daily challenge: one seeded attempt per day, time shared via URL. */
+  startDaily() {
+    const d = dailyConfig();
+    const done = dailyResult(d.key);
+    if (done) {
+      this.menus.showTitle();
+      this.hud.toast(
+        done.time
+          ? 'DAILY DONE: ' + formatTime(done.time) + ' - BACK TOMORROW!'
+          : 'DAILY ATTEMPT USED - BACK TOMORROW!',
+        'gold',
+        2.6,
+      );
+      this.audio.sfx('tick');
+      return;
+    }
+    this.audio.resume();
+    this.cup = null;
+    this.timeTrial = false;
+    this.noItems = false;
+    this.daily = { key: d.key };
+    this.dailyKey = d.key;
+    this.dailyCfg = d;
+    this.cc = d.cc;
+    this.mirror = d.mirror;
+    this.rnd = dailyRng(d.seed); // fixed AI skills + item rolls
+    this.currentTrackId = d.track;
+    this.loadTrack(d.track);
+    this.buildField(this.pickChar());
+    this.beginIntro();
+    dailySaveStarted(d.key);
+    const label =
+      this.track.def.name + (d.cc === 0.85 ? ' - 50CC' : d.cc === 1.15 ? ' - 150CC' : '') + (d.mirror ? ' - MIRROR' : '');
+    this.hud.toast('DAILY: ' + label, 'gold', 3);
   },
 
   startCupOrTrack(mode) {
@@ -136,6 +177,7 @@ const raceFlow = {
     this.currentTrackId = id;
     this.timeTrial = false;
     this.noItems = false;
+    this.daily = null;
     this.audio.resume();
     this.loadTrack(id);
     this.buildField(this.pickChar());
@@ -235,6 +277,28 @@ const raceFlow = {
     }
   },
 
+  /** Daily challenge finished: record the time, share it, compare with any
+   *  friend time carried in the URL hash. */
+  onDailyFinish() {
+    const d = this.daily;
+    this.daily = null;
+    if (!d) return;
+    const t = this.player.finishTime;
+    dailySave(d.key, t);
+    const friend = dailyFriendTime();
+    let msg = 'DAILY: ' + formatTime(t);
+    if (friend != null) {
+      msg += t <= friend ? ' - YOU BEAT ' + formatTime(friend) + '!' : ' - TARGET ' + formatTime(friend);
+    } else {
+      msg += ' - LINK COPIED, CHALLENGE A FRIEND!';
+      try {
+        const url = location.origin + location.pathname + '#daily=' + t.toFixed(3);
+        navigator.clipboard?.writeText(url).catch(() => { /* clipboard blocked */ });
+      } catch { /* clipboard unavailable */ }
+    }
+    this.hud.toast(msg, 'gold', 4);
+  },
+
   /** Time trial: a lap just completed - maybe a new personal best.
    *  Returns true when a new record was saved (its banner is already up). */
   onTTLap(lapTime) {
@@ -264,6 +328,7 @@ const raceFlow = {
     this.hud.banner(head, 'final', 3.5);
     this.audio.stopMusic();
     this.audio.sfx('finish');
+    if (this.daily) this.onDailyFinish();
     for (let i = 0; i < 3; i++) {
       setTimeout(() => {
         const t = this.track;
@@ -287,6 +352,19 @@ const raceFlow = {
         cup.pts[k.def.id] = (cup.pts[k.def.id] || 0) + gain;
       }
       cup.final = cup.race >= cup.total;
+      // Grand Prix champion: the winner's racer earns the gold rim livery.
+      if (cup.final) {
+        const best = Object.keys(cup.pts).reduce((a, b) => (cup.pts[b] > cup.pts[a] ? b : a));
+        if (best === this.player.def.id) {
+          const char = this.player.def;
+          if (addUnlock('gold', char.id)) {
+            setTimeout(() => {
+              this.hud.toast(char.name + ' CHAMPION LIVERY UNLOCKED!', 'gold', 4);
+              this.audio.sfx('finish');
+            }, 1600);
+          }
+        }
+      }
     }
     this.hud.results(this.ranked, this.player, this.lapTimes, '', false, cup,
       this.timeTrial ? (this.newRecord ? 'NEW RECORD!' : 'TIME TRIAL!') : null);

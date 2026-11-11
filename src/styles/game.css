@@ -37,6 +37,8 @@ body.gplock #picks .arrow, body.gplock #picks .pk:not(.on) { opacity: .28; point
 #picks .arrow { font-size: 26px; opacity: .9; padding: 0 4px; margin: 0 10px; cursor: pointer; text-shadow: 0 3px 0 var(--ink); }
 .pk { width: 70px; height: 70px; border-radius: 50%; border: 5px solid var(--c); background: rgba(8,16,50,.62); overflow: hidden; cursor: pointer; transition: transform .16s cubic-bezier(.2,1.6,.4,1), box-shadow .16s; box-shadow: 0 5px 0 rgba(8,16,50,.6); margin: 0 14px; }
 .pk img { width: 100%; height: 100%; display: block; }
+.pk .goldstar { position: absolute; top: -4px; right: -2px; font-size: 20px; pointer-events: none; filter: drop-shadow(0 2px 0 rgba(8,16,50,.6)); }
+.pk { position: relative; }
 .pk.on { transform: scale(1.36) translateY(-9px); box-shadow: 0 0 0 5px #fff, 0 0 30px 6px var(--c); position: relative; z-index: 2; }
 #pickname { margin-bottom: 20px; font-size: min(4vw, 50px); font-style: italic; font-weight: 900; letter-spacing: 1px; line-height: 1; -webkit-text-stroke-color: #fff; filter: drop-shadow(0 5px 0 rgba(8,16,50,.7)); }
 #pickname.pop { animation: pop .3s cubic-bezier(.2,1.8,.4,1); }
@@ -84,6 +86,7 @@ body.mp .hint, body.touch .hint { display: none; }
 .mbtn.solo { background: linear-gradient(180deg, #fff3a0, #ffd21e 55%, #ff9a1e); color: var(--ink); animation: nudge 1.4s ease-in-out infinite; }
 @keyframes nudge { 50% { transform: scale(1.05); } }
 .mbtn.multi { background: linear-gradient(180deg, #ff6a8f, #ff3b6b); }
+.mbtn.daily { background: linear-gradient(180deg, #a0e8ff, #3aa0ff 55%, #1a6ad0); }
 .lrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; }
 #l-room { font-size: 14px; letter-spacing: 2px; } #l-code { font-size: 26px; color: #ffe14a; letter-spacing: 4px; margin-left: 6px; font-style: italic; }
 #l-name { font: inherit; font-size: 16px; letter-spacing: 2px; width: 156px; padding: 8px 10px 6px; border-radius: 20px; border: 3px solid #fff; background: #fff; color: var(--ink); text-align: center; user-select: text; -webkit-user-select: text; outline: none; touch-action: manipulation; }
@@ -110,7 +113,9 @@ body.mp .hint, body.touch .hint { display: none; }
 #lap i { font-size: 34px; opacity: .92; font-style: italic; }
 #timer { position: absolute; right: 32px; top: 30px; font-size: 40px; font-style: italic; font-variant-numeric: tabular-nums; letter-spacing: 1px; }
 #best { position: absolute; right: 32px; top: 78px; font-size: 15px; font-style: italic; font-variant-numeric: tabular-nums; letter-spacing: 1.5px; color: #ffd21e; text-shadow: 0 2px 0 var(--ink); display: none; }
+#mode { position: absolute; left: 32px; top: 108px; font-size: 15px; font-style: italic; letter-spacing: 1.5px; color: #9fe0ff; text-shadow: 0 2px 0 var(--ink); display: none; }
 #ttmode { display: flex; gap: 8px; margin: 0 0 calc(1.2vh + 6px); }
+#ccmode { display: flex; gap: 8px; margin: 0 0 calc(1.2vh + 6px); }
 #pos { position: absolute; left: 42px; bottom: 28px; font-size: 150px; font-style: italic; font-weight: 900; line-height: 1; -webkit-text-stroke: 14px var(--ink); paint-order: stroke fill; color: #fff; filter: drop-shadow(0 7px 0 rgba(8,16,50,.5)); transform-origin: 20% 80%; }
 #pos sup { font-size: 58px; margin-left: 4px; -webkit-text-stroke: 9px var(--ink); }
 #pos.p1 { color: #ffe14a; } #pos.p2 { color: #e8f1ff; } #pos.p3 { color: #ffb070; }
@@ -188,7 +193,7 @@ body.cap #mutechip, body.nohud #hud { display: none !important; }
 @keyframes rin { from { opacity: 0; transform: translateX(-30px); } }
 .again { text-align: center; margin-top: 14px; letter-spacing: 2px; font-size: 16px; animation: pulse 1.1s infinite; }
 /* ---- small screens: the HUD widgets shrink together (--hs is set from the window size) */
-#lap, #timer, #best, #coins, #board, #minimap, #itembox, #itemname, #itemkey, #pos, #speed { zoom: var(--hs, 1); }
+#lap, #timer, #best, #mode, #coins, #board, #minimap, #itembox, #itemname, #itemkey, #pos, #speed { zoom: var(--hs, 1); }
 @media (max-height: 520px) and (orientation: landscape) {
   #title { padding: 4vh 2vw 4vh 3vw; }
   .logo { --lw: min(40vw, 54vh); } .logo .b { border-width: 3px; } body.mp .logo, body.solo .logo { --lw: 46vh; } body.mp .logo .b, body.solo .logo .b { display: none; }

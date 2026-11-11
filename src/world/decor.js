@@ -31,7 +31,7 @@ export function instanceAt(x, y, z, ry = 0, scale = 1, rx = 0, rz = 0) {
  * Turn a model plus a list of matrices into a group of InstancedMeshes, one per
  * mesh inside the model, preserving the model's own hierarchy.
  */
-export function instanceModel(src, matrices, castShadow = true) {
+export function instanceModel(src, matrices, castShadow = true, tint = null) {
   const group = new THREE.Group();
   if (!matrices.length) return group;
   src.updateMatrixWorld(true);
@@ -41,6 +41,10 @@ export function instanceModel(src, matrices, castShadow = true) {
     for (let i = 0; i < matrices.length; i++) {
       _m.multiplyMatrices(matrices[i], node.matrixWorld);
       inst.setMatrixAt(i, _m);
+    }
+    if (tint) {
+      for (let i = 0; i < matrices.length; i++) inst.setColorAt(i, tint);
+      if (inst.instanceColor) inst.instanceColor.needsUpdate = true;
     }
     inst.castShadow = castShadow;
     inst.receiveShadow = true;
@@ -86,17 +90,28 @@ export function buildDecor(track, A, fx, quality = 'high') {
   };
   const isSky = def.id === 'sky';
   const isVolcano = def.id === 'volcano';
+  const isDesert = def.id === 'desert';
+  const isSnow = def.id === 'snow';
   const lowQ = quality === 'low';
 
   // ---------------------------------------------------------------- palms etc
   if (!isSky) {
-    // Palms for beach, broadleaf trees for jungle, crystals for volcano.
-    const treeKey = isVolcano ? 'crystal' : def.id === 'jungle' ? 'tree_green' : 'palm1';
-    const altKey = def.id === 'jungle' ? 'tree_green2' : 'palm2';
-    const rockKey = isVolcano ? 'rock3' : 'rock1';
-    const bushKey = def.id === 'beach' ? 'bush' : 'plant';
+    // Palms for beach, broadleaf trees for jungle, crystals for volcano,
+    // icy spires for snow (no green foliage on the ice), cacti for desert.
+    const treeKey = isVolcano ? 'crystal'
+      : isSnow ? 'crystal'
+      : def.id === 'jungle' ? 'tree_green'
+      : isDesert ? 'plant'
+      : 'palm1';
+    const altKey = isSnow ? 'rock2'
+      : def.id === 'jungle' ? 'tree_green2'
+      : isDesert ? 'bush2'
+      : 'palm2';
+    const rockKey = isVolcano ? 'rock3' : isDesert ? 'rock2' : 'rock1';
+    const bushKey = isSnow ? 'rock1'
+      : def.id === 'beach' ? 'bush' : isDesert ? 'plant' : 'plant';
 
-    const place = (key, count, minLat, maxLat, minScale, maxScale, yOff = 0) => {
+    const place = (key, count, minLat, maxLat, minScale, maxScale, yOff = 0, tint = null) => {
       const src = A[key];
       if (!src) return;
       const mats = [];
@@ -119,13 +134,25 @@ export function buildDecor(track, A, fx, quality = 'high') {
         if (g.y < 0.6) continue;
         mats.push(instanceAt(g.x, g.y + yOff, g.z, rnd() * Math.PI * 2, lerp(minScale, maxScale, rnd())));
       }
-      group.add(instanceModel(src, mats, true));
+      group.add(instanceModel(src, mats, true, tint));
     };
 
-    place(treeKey, def.id === 'beach' ? 190 : 260, 11, 44, 0.75, 1.5);
-    place(altKey, 90, 13, 52, 0.7, 1.25);
-    place(rockKey, 70, 12, 40, 0.6, 1.6);
-    place(bushKey, 130, 10.5, 34, 0.7, 1.3);
+    // Snow: icy spires instead of trees; no foliage tint needed.
+    place(treeKey, isSnow ? 120 : isDesert ? 90 : def.id === 'beach' ? 190 : 260, 11, 44, 0.75, 1.5);
+    place(altKey, isSnow ? 70 : isDesert ? 40 : 90, 13, 52, 0.7, 1.25);
+    place(rockKey, isDesert ? 120 : 70, 12, 40, 0.6, 1.6);
+    place(bushKey, isSnow ? 60 : isDesert ? 60 : 130, 10.5, 34, 0.7, 1.3);
+
+    if (isSnow) {
+      // Snowdrift boulders and extra icy spires high on the slopes.
+      place('rock3', 40, 16, 48, 0.8, 1.7);
+      place('crystal', 30, 14, 40, 0.7, 1.2);
+    }
+    if (isDesert) {
+      // Bones of the canyon: big rocks and the odd totem.
+      place('rock3', 50, 14, 46, 0.8, 1.8);
+      place('totem', 18, 13, 36, 0.9, 1.3);
+    }
 
     if (def.id === 'beach') {
       // Corals and umbrellas along the shoreline.

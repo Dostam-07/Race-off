@@ -118,6 +118,12 @@ export function syncKart(kart, dt) {
     if (i < 2) w.rotation.y = kart.steerVis * 0.42 - kart.driftVis * 0.5;
   });
 
+  // Champion star: slow spin and a gentle bob.
+  if (ud.champStar) {
+    ud.champStar.rotation.y += dt * 2.2;
+    ud.champStar.position.y = 2.6 + Math.sin(g.time * 2.4 + kart.slot) * 0.12;
+  }
+
   // Body float, head look-at and blink.
   if (dt > 0) {
     const accel = clamp((kart.speed - kart.prevSpeed) / dt, -40, 40);

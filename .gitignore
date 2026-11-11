@@ -15,3 +15,8 @@ Thumbs.db
 
 # test artifacts
 tools/*.png
+tools/crop_*.png
+tools/crop_*.jpg
+tools/shot_small.jpg
+tools/probe_*.png
+docs/*.jpg

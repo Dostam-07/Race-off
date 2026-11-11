@@ -4,9 +4,10 @@
 // results screen. Everything here only manipulates DOM and calls into Game;
 // the game state machine lives in Game.js.
 
-import { $ } from '../core/utils.js';
-import { ROSTER, CHAR_TUNING } from '../kart/KartModel.js';
+import { $, formatTime } from '../core/utils.js';
+import { ROSTER, CHAR_TUNING, getUnlocks } from '../kart/KartModel.js';
 import { TRACK_ORDER } from '../tracks/definitions.js';
+import { dailyConfig, dailyFriendTime } from '../core/daily.js';
 const STORE_RACER = 'ro-racer';
 
 export class Menus {
@@ -15,10 +16,27 @@ export class Menus {
     this.pick = 0;
     this.mode = 'gp';
     this.tt = false;
+    this.cc = 1;
+    this.mirror = false;
     this.lastFocus = null;
     this.buildPicks();
     this.wire();
     this.restoreRacer();
+    this.greetChallenge();
+  }
+
+  /** A friend shared #daily=<time>: greet the player with the target. */
+  greetChallenge() {
+    const t = dailyFriendTime();
+    if (t == null) return;
+    const d = dailyConfig();
+    setTimeout(() => {
+      this.game.hud?.toast(
+        'CHALLENGE: BEAT ' + formatTime(t) + ' IN TODAY\'S DAILY!',
+        'gold',
+        4,
+      );
+    }, 3500);
   }
 
   // ------------------------------------------------------------------ wiring
@@ -31,6 +49,11 @@ export class Menus {
       document.body.classList.add('solo');
       this.showCup();
     });
+    $('m-daily')?.addEventListener('click', () => {
+      g.audio.resume();
+      g.audio.sfx('tick');
+      g.startDaily();
+    });
     $('mp-new')?.addEventListener('click', () => {
       g.audio.resume();
       g.startMultiplayer();
@@ -38,7 +61,7 @@ export class Menus {
     $('l-invite')?.addEventListener('click', () => g.copyInvite());
     $('l-leave')?.addEventListener('click', () => g.leaveRoom());
     $('l-start')?.addEventListener('click', () => {
-      if (g.mp && g.mp.isHost) g.mp.start();
+      if (g.mp && g.mp.isHost) g.mp.start({ cc: g.cc, mirror: g.mirror });
     });
     $('l-name')?.addEventListener('input', (e) => {
       try {
@@ -103,6 +126,29 @@ export class Menus {
       });
     });
 
+    // Engine class + mirror toggle on the track picker.
+    document.querySelectorAll('#ccmode .mchip').forEach((el) => {
+      el.addEventListener('click', () => {
+        if (el.dataset.cc) {
+          this.cc = parseFloat(el.dataset.cc);
+          document.querySelectorAll('#ccmode .mchip[data-cc]').forEach((e) =>
+            e.classList.toggle('on', e === el));
+        } else if (el.dataset.mirror) {
+          this.mirror = !this.mirror;
+          el.classList.toggle('on', this.mirror);
+          // Rebuild the title backdrop so the flip is visible right away.
+          if (g.state === 'title' && g.track) g.loadTrack(g.track.def.id, {});
+        }
+        try {
+          localStorage.setItem('ro-cc', String(this.cc));
+          localStorage.setItem('ro-mirror', this.mirror ? '1' : '0');
+        } catch { /* private mode */ }
+        this.applyClass();
+        g.audio.sfx('tick');
+      });
+    });
+    this.restoreClass();
+
     $('results')?.addEventListener('click', (e) => {
       if (e.target.closest('.again')) g.raceAgain();
     });
@@ -137,6 +183,13 @@ export class Menus {
         this.select(i);
       });
       host.appendChild(el);
+      if ((getUnlocks().gold || []).includes(r.id)) {
+        const star = document.createElement('i');
+        star.className = 'goldstar';
+        star.textContent = '\u2B50';
+        star.title = 'Champion livery unlocked';
+        el.appendChild(star);
+      }
     });
     host.appendChild(arrow('\u25B6', 1));
   }
@@ -196,6 +249,25 @@ export class Menus {
     $('modes')?.classList.add('on');
     $('mp')?.classList.add('on');
     this.game.fitUI();
+  }
+
+  /** Push the chosen engine class / mirror flag into the live game. */
+  applyClass() {
+    this.game.cc = this.cc;
+    this.game.mirror = this.mirror;
+  }
+
+  /** Restore the engine class / mirror choice from the last session. */
+  restoreClass() {
+    try {
+      const cc = parseFloat(localStorage.getItem('ro-cc'));
+      if (cc === 0.85 || cc === 1 || cc === 1.15) this.cc = cc;
+      this.mirror = localStorage.getItem('ro-mirror') === '1';
+    } catch { /* private mode */ }
+    document.querySelectorAll('#ccmode .mchip[data-cc]').forEach((e) =>
+      e.classList.toggle('on', parseFloat(e.dataset.cc) === this.cc));
+    document.querySelector('#ccmode .mchip[data-mirror]')?.classList.toggle('on', this.mirror);
+    this.applyClass();
   }
 
   /** Start button label reflects GP vs track vs time trial. */

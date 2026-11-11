@@ -38,8 +38,10 @@ Grand Prix, or online with friends. No install, no account, just play.
   through long corners and let it rip on exit.
 - 🍄 **A full item game** — rockets, traps, shields, lightning bolts and speed
   mushrooms, with an on-screen roulette.
-- 🏆 **Grand Prix mode** — race all four tracks back to back with points,
+- 🏆 **Grand Prix mode** — race all six tracks back to back with points,
   or pick any single track for a quick 3-lap dash.
+- 🏜️ **Six tracks** — beach, jungle, desert, volcano, snow and a sky finale,
+  each with its own palette, hazards and scenery.
 - ⏱️ **Time trial + ghost** — pick TIME TRIAL on the track picker for a
   clean, item-free lap against your own best: a translucent ghost kart
   replays your record lap in real time, and every personal best is saved
@@ -47,6 +49,14 @@ Grand Prix, or online with friends. No install, no account, just play.
 - 📲 **Installable PWA** — add Race-Off to your home screen / desktop and it
   runs fullscreen like an app; a service worker keeps it playable offline
   after the first visit.
+- 🏁 **Speed classes & mirror mode** — 50cc / 100cc / 150cc on the track
+  picker, plus a MIRROR toggle that flips every track's geometry for a
+  whole new challenge. Your choice is remembered between sessions.
+- 📅 **Daily challenge** — one seeded run per day: the date picks the track,
+  engine class and mirror flag, and seeds the item roulette. Finish to copy
+  a challenge link — friends open it and race your time. Streaks included.
+- ⭐ **Champion liveries** — win a Grand Prix and your racer earns a spinning
+  gold star and a badge on the picker, saved in your browser.
 - 🌐 **Online multiplayer** — create a room, share a 4-character invite code
   (or a one-click invite link), and race up to 6 human players with live
   positions, emotes and host handover.
@@ -66,6 +76,8 @@ Grand Prix, or online with friends. No install, no account, just play.
 |---|---|
 | ![Beach Blast](docs/shot-beach.png) | ![Jungle Dash](docs/shot-jungle.png) |
 | *Beach Blast* | *Jungle Dash* |
+| ![Dune Drift](docs/shot-desert.png) | ![Frost Rush](docs/shot-snow.png) |
+| *Dune Drift* | *Frost Rush* |
 | ![Volcano Rush](docs/shot-volcano.png) | ![Sky Sprint](docs/shot-sky.png) |
 | *Volcano Rush* | *Sky Sprint* |
 
@@ -91,6 +103,8 @@ Grand Prix, or online with friends. No install, no account, just play.
 | 🏖️ **Beach Blast** | Sunny sands, palms and balloons | Sand traps off the racing line |
 | 🌿 **Jungle Dash** | Vines, tiki totems and thick canopy | Slippery mud on the inside line |
 | 🌋 **Volcano Rush** | Lava glow and ember skies | Erupting geysers near the summit |
+| 🏜️ **Dune Drift** | Rolling dunes and a canyon trestle | A gap jump over the chasm, an oasis crossing |
+| ❄️ **Frost Rush** | Icy esses and a frozen lake | Double crevasse crossings, low grip on the ice |
 | ☁️ **Sky Sprint** | A floating finale above the clouds | Narrow sky-road with no rails |
 
 ## 🎮 Controls
@@ -238,6 +252,11 @@ node tools/test_steer.mjs     # left = left, right = right
 node tools/test_collide.mjs   # kart-vs-kart separation and bump events
 node tools/test_timetrial.mjs # time trial: no items, ghost record/replay, results
 node tools/test_ghost.mjs     # ghost kart interpolates the saved best lap
+node tools/test_feel.mjs      # audio feel: doppler, surface skid, countdown blips
+node tools/test_new_tracks.mjs# desert + snow: build, contents, AI laps them
+node tools/test_class_mirror.mjs # 50/100/150cc speeds + mirrored geometry + AI laps
+node tools/test_daily.mjs     # daily challenge: seed, one attempt, share hash
+node tools/test_unlocks.mjs   # GP win -> champion livery + picker badge
 node tools/test_pwa.mjs       # manifest, icons, service worker (preview build)
 node tools/test_spacing.mjs   # 600-frame race, asserts no kart overlap
 node tools/test_mp.mjs        # host + guest in two pages

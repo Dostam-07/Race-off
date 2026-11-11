@@ -4,6 +4,15 @@
 // that curve (gaps, ramps, boosts, coins, item boxes and sector labels).
 
 import { smooth, lerp } from '../core/utils.js';
+import * as THREE from 'three';
+
+/** Length of the closed loop a control-point list describes, in metres. */
+const loopLen = (ctrl) =>
+  new THREE.CatmullRomCurve3(
+    ctrl.map((p) => new THREE.Vector3(p[0], p[1], p[2])),
+    true,
+    'centripetal',
+  ).getLength();
 
 /** Deterministic 0..1 hash, used for the volcano's surface bumps. */
 const hash1 = (n) => {
@@ -602,7 +611,193 @@ export const SKY = {
   _sky: true,
 };
 
-export const TRACKS = { beach: BEACH, jungle: JUNGLE, volcano: VOLCANO, sky: SKY };
-export const TRACK_ORDER = ['beach', 'jungle', 'volcano', 'sky'];
+/** Dune Drift - rolling sand dunes, a canyon bridge crossing and an oasis. */
+const desertCtrl = [
+  [0, 2, 60], [80, 2, 62], [150, 2.5, 55],
+  [210, 3, 40], [242, 4.5, 0], [236, 6, -42],
+  [198, 8, -72], [148, 10, -80], [112, 12, -112],
+  [124, 14, -150], [92, 15, -186], [42, 14, -196],
+  [-8, 12, -178], [-42, 10, -148],
+  [-92, 9, -162], [-132, 10, -192], [-172, 11, -186],
+  [-202, 9, -150], [-196, 7, -110],
+  [-232, 5.5, -78], [-272, 4.5, -58], [-292, 3.5, -18],
+  [-286, 3, 28], [-258, 2.5, 56], [-218, 2.5, 72],
+  [-168, 3, 80], [-118, 2.5, 70], [-58, 2, 62],
+];
+const DL = loopLen(desertCtrl);
+const D = (f) => f * DL;
+
+export const DESERT = {
+  id: 'desert',
+  name: 'DUNE DRIFT',
+  sub: 'CANYON KING GRAND PRIX',
+  loading: ['Carving the canyons', 'Raising the dunes'],
+  ctrl: desertCtrl,
+  // The road crosses a deep canyon on a wooden trestle mid-loop.
+  gorge: (x, z) => x < -55 && x > -220 && z < -142 && z > -218,
+  bridge: (x, z) => x < -55 && x > -220 && z < -142 && z > -218,
+  // A shallow oasis crossing on the run home.
+  lagoon: (s) => smooth(D(0.76), D(0.80), s) * (1 - smooth(D(0.86), D(0.90), s)),
+  gaps: [[D(0.415), D(0.428)]],
+  boxes: [D(0.04), D(0.20), D(0.38), D(0.55), D(0.72), D(0.90)],
+  pads: [
+    [D(0.02), 0, 0],
+    [D(0.30), 3, 0],
+    [D(0.47), -3, 0],
+    [D(0.407), 0, 1, 7.4],
+    [D(0.68), 0, 0],
+    [D(0.88), 0, 1],
+  ],
+  coins: [
+    [D(0.06), 5, 7, 0, 0, 0],
+    [D(0.13), 5, 7, 3.5, -4, 0],
+    [D(0.24), 5, 7, 0, -4, 0],
+    [D(0.35), 5, 7, -3.5, 3.5, 0],
+    [D(0.415), 3, 6.5, 0, 0, 1],
+    [D(0.50), 5, 7, 4, -4, 0],
+    [D(0.62), 5, 7, -4, -3, 0],
+    [D(0.76), 5, 7, 0, 3, 0],
+    [D(0.84), 5, 7, -3.5, -3.5, 0],
+    [D(0.94), 5, 7, 3.2, -3.2, 0],
+    [D(0.94), 5, 7, -3.2, 3.2, 0],
+  ],
+  sections: [
+    [D(0.02), 'SCORCHED FLATS', '#ffb347', '#e0562a'],
+    [D(0.15), 'SUNKEN DUNES', '#ffd21e', '#e08a1a'],
+    [D(0.30), 'CREST RIDGE', '#19b56b', '#0c7a52'],
+    [D(0.44), 'CANYON CROSSING', '#c05a2a', '#7a2a10'],
+    [D(0.58), 'THE GREAT SWING', '#a04cff', '#3a1fa8'],
+    [D(0.74), 'MIRAGE OASIS', '#12c4d6', '#0b7fd0'],
+    [D(0.92), 'FINAL STRAIGHT', '#ff7a1a', '#e0243c'],
+  ],
+  flags: [
+    [D(0.01), D(0.07), [-1, 1]],
+    [D(0.60), D(0.66), [-1, 1]],
+    [D(0.91), D(0.99), [1]],
+  ],
+  fans: [
+    [D(0.03), D(0.06), 1], [D(0.03), D(0.06), -1],
+    [D(0.33), D(0.36), 1],
+    [D(0.52), D(0.55), -1],
+    [D(0.77), D(0.80), 1], [D(0.77), D(0.80), -1],
+    [D(0.92), D(0.95), 1], [D(0.92), D(0.95), -1],
+  ],
+  hints: { turbo: [D(0.01), D(0.06)], drift: [D(0.24), D(0.36)] },
+  intro: {
+    p0: [-300, 95, 210],
+    p1: [-210, 55, 135],
+    l0: [30, 10, 50],
+    l1: [80, 6, 45],
+  },
+  palette: ['#c08a52', '#96683c', '#ecc880', '#dcb268', '#e8e2c8', '#caa25e', '#3fa9c9'],
+};
+
+/** Frost Rush - icy esses, a frozen lake and a double crevasse crossing. */
+const snowCtrl = [
+  [0, 3, 60], [72, 3, 62], [138, 3.6, 56],
+  [196, 4.5, 64], [234, 5, 78], [268, 5, 54],
+  [280, 5.5, 16], [266, 6.5, -26], [230, 8.5, -56],
+  [180, 10.5, -72], [130, 12.5, -90],
+  [100, 14, -126], [112, 15.5, -162],
+  [66, 16, -188], [10, 15, -172],
+  [-44, 13.5, -186], [-94, 13, -198], [-140, 13.5, -186],
+  [-174, 12, -152], [-156, 10.5, -114],
+  [-194, 9.5, -88], [-238, 9, -104],
+  [-262, 8, -142], [-248, 7, -178], [-212, 6.5, -192],
+  [-252, 6, -166], [-272, 6, -128], [-284, 5.5, -84],
+  [-292, 5, -40], [-290, 4.5, 4], [-284, 4.5, 40],
+  [-272, 4, 68], [-248, 3.5, 88], [-212, 3.5, 94],
+  [-172, 3.2, 88], [-132, 3, 72], [-88, 3, 62], [-46, 3, 60],
+];
+const SL = loopLen(snowCtrl);
+const S = (f) => f * SL;
+
+export const SNOW = {
+  id: 'snow',
+  name: 'FROST RUSH',
+  sub: 'GLACIER PEAK GRAND PRIX',
+  loading: ['Freezing the lake', 'Stacking snowmen'],
+  ctrl: snowCtrl,
+  // Two crossings over one crevasse: the out-swinger and the return leg.
+  gorge: (x, z) => x < -225 && z < -92 && z > -152,
+  bridge: (x, z) => x < -225 && z < -92 && z > -152,
+  // The frozen lake: the road dips onto the ice and back out.
+  lagoon: (s) => smooth(S(0.58), S(0.62), s) * (1 - smooth(S(0.70), S(0.74), s)),
+  boxes: [S(0.05), S(0.22), S(0.40), S(0.56), S(0.76), S(0.90)],
+  pads: [
+    [S(0.02), 0, 0],
+    [S(0.28), 3, 0],
+    [S(0.50), -3, 0],
+    [S(0.64), 0, 0],
+    [S(0.86), 0, 1],
+  ],
+  coins: [
+    [S(0.06), 5, 7, 0, 0, 0],
+    [S(0.14), 5, 7, -3.5, 4, 0],
+    [S(0.26), 5, 7, 0, -4, 0],
+    [S(0.36), 5, 7, 3.5, 3.5, 0],
+    [S(0.46), 5, 7, -4, -3, 0],
+    [S(0.60), 5, 7, 0, 4, 0],
+    [S(0.68), 5, 7, -3.5, -3.5, 0],
+    [S(0.78), 5, 7, 4, -4, 0],
+    [S(0.94), 5, 7, -3.2, 3.2, 0],
+    [S(0.94), 5, 7, 3.2, -3.2, 0],
+  ],
+  sections: [
+    [S(0.02), 'FROST GATE', '#b9a6ff', '#5a4a9a'],
+    [S(0.15), 'PINE SUMMIT', '#19b56b', '#0c7a52'],
+    [S(0.32), 'AVALANCHE ALLEY', '#ff5a12', '#a02a08'],
+    [S(0.56), 'FROZEN LAKE', '#9fe0ff', '#3a8ac0'],
+    [S(0.72), 'CREVASSE RUN', '#12d6c4', '#0b7fd0'],
+    [S(0.92), 'FINAL STRAIGHT', '#ffb347', '#e0562a'],
+  ],
+  flags: [
+    [S(0.01), S(0.07), [-1, 1]],
+    [S(0.52), S(0.58), [-1, 1]],
+    [S(0.91), S(0.99), [1]],
+  ],
+  fans: [
+    [S(0.03), S(0.06), 1], [S(0.03), S(0.06), -1],
+    [S(0.36), S(0.39), 1],
+    [S(0.63), S(0.66), -1],
+    [S(0.93), S(0.96), 1], [S(0.93), S(0.96), -1],
+  ],
+  hints: { turbo: [S(0.01), S(0.06)], drift: [S(0.30), S(0.44)] },
+  intro: {
+    p0: [-300, 95, 210],
+    p1: [-210, 55, 135],
+    l0: [30, 10, 50],
+    l1: [80, 6, 45],
+  },
+  palette: ['#93a7bd', '#71879e', '#f2f7fc', '#dbe8f4', '#ffffff', '#bcd8ea', '#8fd4ec'],
+};
+
+export const TRACKS = { beach: BEACH, jungle: JUNGLE, volcano: VOLCANO, sky: SKY, desert: DESERT, snow: SNOW };
+export const TRACK_ORDER = ['beach', 'jungle', 'desert', 'volcano', 'snow', 'sky'];
 
 export const volcanoMeta = { RIM_Y, RIM_TO, TURNS, TURN_R, BASE_Z, marks: volcanoMarks };
+
+/** Mirrored variant of a track for MIRROR mode: x-flipped control points and
+ *  coordinate-based feature functions. Distance-based data (boxes, pads,
+ *  coins, gaps, sections) is shared as-is - the lap order is unchanged, only
+ *  the geometry handedness flips, so left turns become right turns. */
+export function mirrorDef(def) {
+  if (def._mirror) return def._mirror;
+  const m = {
+    ...def,
+    ctrl: def.ctrl.map((p) => [-p[0], p[1], p[2]]),
+    bridge: def.bridge ? (x, z) => def.bridge(-x, z) : undefined,
+    gorge: def.gorge ? (x, z) => def.gorge(-x, z) : undefined,
+    volcano: def.volcano ? { ...def.volcano, x: -def.volcano.x } : undefined,
+    intro: def.intro
+      ? {
+          p0: [-def.intro.p0[0], def.intro.p0[1], def.intro.p0[2]],
+          p1: [-def.intro.p1[0], def.intro.p1[1], def.intro.p1[2]],
+          l0: [-def.intro.l0[0], def.intro.l0[1], def.intro.l0[2]],
+          l1: [-def.intro.l1[0], def.intro.l1[1], def.intro.l1[2]],
+        }
+      : undefined,
+  };
+  def._mirror = m;
+  return m;
+}

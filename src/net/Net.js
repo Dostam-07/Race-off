@@ -449,7 +449,13 @@ export class Net {
       for (const r of msg.humans) if (isRacer(r)) names[r] = cleanName(msg.names && msg.names[r]);
       this.phase = 'race';
       this.h.start(
-        { grid, humans: msg.humans.filter(isRacer), names },
+        {
+          grid,
+          humans: msg.humans.filter(isRacer),
+          names,
+          cc: Number.isFinite(msg.cc) ? msg.cc : 1,
+          mirror: !!msg.mirror,
+        },
         Math.min(400, Math.max(0, +msg.delay || 0)),
       );
     } else if (msg.t === 'full') {
@@ -591,8 +597,9 @@ export class Net {
     this.sync();
   }
 
-  /** Host: shuffle the grid, tell everyone and start the race locally. */
-  start() {
+  /** Host: shuffle the grid, tell everyone and start the race locally.
+   *  opts carries the host's engine class and mirror flag to the guests. */
+  start(opts = {}) {
     if (!this.isHost || this.phase !== 'lobby' || this.status !== 'open') return false;
     this.phase = 'race';
 
@@ -613,10 +620,12 @@ export class Net {
         grid,
         humans,
         names,
+        cc: opts.cc,
+        mirror: !!opts.mirror,
         delay: (worst - Math.min(600, g.rtt)) / 2,
       });
     }
-    return this.h.start({ grid, humans, names }, worst / 2);
+    return this.h.start({ grid, humans, names, cc: opts.cc, mirror: !!opts.mirror }, worst / 2);
   }
 
   pick(racer, name) {

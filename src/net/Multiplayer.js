@@ -393,6 +393,9 @@ const mpMethods = {
     if (!mp || this.state !== 'title') return;
     this.timeTrial = false;
     this.noItems = false;
+    // The host's engine class and mirror choice rule the room.
+    if (Number.isFinite(info.cc)) this.cc = info.cc;
+    this.mirror = !!info.mirror;
 
     // Make sure I am driving the racer the host assigned me.
     if (this.rid(this.player) !== mp.me.racer) this.menus.select(mp.me.racer, true);

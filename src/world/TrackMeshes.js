@@ -35,6 +35,14 @@ const C = {
     road: '#33303c', roadSpeck: '#5a5568', kerbA: '#b9a6ff', kerbB: '#fafafa',
     wall: '#ffffff', wallTop: '#b9a6ff', bridge: '#cfd8f0', rail: '#ffd24a',
   },
+  desert: {
+    road: '#4a4438', roadSpeck: '#6e6450', kerbA: '#ff8a1a', kerbB: '#faf0d8',
+    wall: '#e8d5a8', wallTop: '#c05a2a', bridge: '#a87848', rail: '#c9a35a',
+  },
+  snow: {
+    road: '#3e4654', roadSpeck: '#64708c', kerbA: '#3aa0ff', kerbB: '#fafafa',
+    wall: '#f4faff', wallTop: '#3aa0ff', bridge: '#cfd8f0', rail: '#9fe0ff',
+  },
 };
 
 /** Track-editor style palette lookup so a new track only needs a `look` key. */

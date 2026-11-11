@@ -55,8 +55,9 @@ export function updateKart(kart, dt, active) {
     Math.abs(kart.lat) > ROAD_HALF + (t.def.id === 'volcano' ? 2.2 : 1) &&
     !(t.def.id === 'jungle' && g.jungleDeck !== undefined && g.jungleDeck(kart.idx));
 
-  // --- top speed budget
-  let top = BASE_SPEED * kart.skill * (1 + 0.008 * kart.coins);
+  // --- top speed budget (scaled by the engine class: 50cc/100cc/150cc)
+  const cc = g.cc || 1;
+  let top = BASE_SPEED * kart.skill * (1 + 0.008 * kart.coins) * cc;
 
   // Rubber banding keeps the pack together without being obvious.
   if (!kart.isPlayer && active) {
@@ -85,7 +86,7 @@ export function updateKart(kart, dt, active) {
 
   if (offroad && kart.boost <= 0) top *= 0.56;
   if (kart.boost > 0) {
-    top = Math.max(top, BASE_SPEED * kart.boostMax);
+    top = Math.max(top, BASE_SPEED * kart.boostMax * cc);
     kart.boost -= dt;
     if (kart.boost <= 0) kart.boostMax = 1;
   }

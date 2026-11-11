@@ -104,6 +104,22 @@ export class HUD {
     el.style.display = '';
   }
 
+  /** Engine-class / mirror badge under the lap counter. */
+  setMode(cc, mirror) {
+    const el = $('mode');
+    if (!el) return;
+    const parts = [];
+    if (cc === 0.85) parts.push('50cc');
+    if (cc === 1.15) parts.push('150cc');
+    if (mirror) parts.push('MIRROR');
+    const s = parts.join(' ');
+    if (s !== this._mode) {
+      this._mode = s;
+      el.textContent = s;
+      el.style.display = s ? '' : 'none';
+    }
+  }
+
   setPos(rank) {
     if (rank === this.lastPos) return;
     this.lastPos = rank;

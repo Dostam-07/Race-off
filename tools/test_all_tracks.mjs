@@ -21,7 +21,7 @@ await page.evaluate(() => {
   window.__shot = () => { window.__realRender(g.scene, g.camera); window.__realRender(g.scene, g.camera); };
 });
 
-for (const track of ['beach', 'jungle', 'volcano', 'sky']) {
+for (const track of ['beach', 'jungle', 'desert', 'volcano', 'snow', 'sky']) {
   await page.evaluate((t) => {
     const g = window.game;
     if (g.state !== 'title') g.toTitle();

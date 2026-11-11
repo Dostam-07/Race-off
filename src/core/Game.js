@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { clamp, lerp, damp, smooth, angleDelta, wrapIdx, mulberry32 } from '../core/utils.js';
 import { loadModels, radialShadowTexture } from '../core/assets.js';
 import { Track } from '../tracks/Track.js';
-import { TRACKS, TRACK_ORDER, BEACH } from '../tracks/definitions.js';
+import { TRACKS, TRACK_ORDER, BEACH, mirrorDef } from '../tracks/definitions.js';
 import { TrackMeshes } from '../world/TrackMeshes.js';
 import { Terrain } from '../world/Terrain.js';
 import { terrainMaterial, grainTexture } from '../world/materials.js';
@@ -46,6 +46,8 @@ export class Game {
     this.paused = false;
     this.finishedCount = 0;
     this.cup = null;
+    this.cc = 1; // engine class multiplier: 0.85 = 50cc, 1 = 100cc, 1.15 = 150cc
+    this.mirror = false; // mirrored track geometry
     this.players = [];
     this.chars = {};
     this.mp = null;
@@ -253,7 +255,8 @@ export class Game {
       return;
     }
     this.disposeWorld();
-    const def = TRACKS[trackId] || BEACH;
+    const def0 = TRACKS[trackId] || BEACH;
+    const def = this.mirror ? mirrorDef(def0) : def0;
     const track = new Track(def);
     track.patchGenerated();
     this.track = track;
@@ -301,13 +304,21 @@ export class Game {
       jungle: [0xa8d8b0, 0xfff3cc, 0xdfeecb],
       volcano: [0x2a1f38, 0xffb066, 0x4a3040],
       sky: [0x2a2350, 0xd8c6ff, 0x4a3f70],
+      desert: [0xffd9a0, 0xfff6e0, 0xffe8c0],
+      snow: [0xbfd8f2, 0xffffff, 0xe8f2fb],
     }[def.id] || [0x9fd8ff, 0xffffff, 0xffffff];
 
     this.scene.background = new THREE.Color(sky[0]);
     this.fog.color.set(sky[2]);
     this.hemi.color.set(sky[1]);
     this.hemi.groundColor.set(palette[6] || '#4a3a38');
-    this.sun.color.set(def.id === 'volcano' ? 0xffb070 : def.id === 'sky' ? 0xc8b8ff : 0xfff2d8);
+    this.sun.color.set(
+      def.id === 'volcano' ? 0xffb070
+      : def.id === 'sky' ? 0xc8b8ff
+      : def.id === 'desert' ? 0xffe8b0
+      : def.id === 'snow' ? 0xe8f2ff
+      : 0xfff2d8,
+    );
 
     const night = def.id === 'volcano' || def.id === 'sky';
     this.hemi.intensity = night ? 1.6 : 1.15;

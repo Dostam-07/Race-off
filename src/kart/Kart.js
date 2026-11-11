@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import {
   clamp, lerp, smooth, damp, angleDelta, angleDamp, wrapIdx, mulberry32,
 } from '../core/utils.js';
-import { buildKart, makeBlobShadow, ROSTER } from './KartModel.js';
+import { buildKart, makeBlobShadow, ROSTER, getUnlocks } from './KartModel.js';
 import { updateKart } from './physics.js';
 import { syncKart, kartEffects } from './kartVisuals.js';
 
@@ -42,7 +42,9 @@ export class Kart {
     this.isPlayer = !!isPlayer;
     this.slot = slot;
 
-    const built = buildKart(game.A, charId);
+    const built = buildKart(game.A, charId, {
+      gold: isPlayer && (getUnlocks().gold || []).includes(charId),
+    });
     this.root = built.root;
     this.tilt = built.tilt;
     this.model = built.model;
@@ -192,7 +194,9 @@ export class Kart {
     this.tilt.remove(this.model);
     this.id = charId;
     this.def = ROSTER.find((r) => r.id === charId) || ROSTER[0];
-    const built = buildKart(this.game.A, charId);
+    const built = buildKart(this.game.A, charId, {
+      gold: this.isPlayer && (getUnlocks().gold || []).includes(charId),
+    });
     this.model = built.model;
     this.tilt.add(this.model);
     this.ud = built.ud;

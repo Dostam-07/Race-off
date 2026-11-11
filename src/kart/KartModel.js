@@ -28,6 +28,29 @@ export const ROSTER_IDS = ROSTER.map((r) => r.id);
 export const driverKey = (id) => `driver_${id}`;
 export const kartBodyKey = (id) => `kart_${id}_r13a`;
 
+/** Characters that have earned rewards, persisted in the browser.
+ *  Shape: { gold: ['fox', ...] } - gold = champion rim livery from a GP win. */
+export function getUnlocks() {
+  try {
+    const u = JSON.parse(localStorage.getItem('ro-unlocks') || '{}');
+    return u && Array.isArray(u.gold) ? u : { gold: [] };
+  } catch {
+    return { gold: [] };
+  }
+}
+
+/** Record an unlock; returns true when it is newly earned. */
+export function addUnlock(kind, id) {
+  const u = getUnlocks();
+  u[kind] = u[kind] || [];
+  if (u[kind].includes(id)) return false;
+  u[kind].push(id);
+  try {
+    localStorage.setItem('ro-unlocks', JSON.stringify(u));
+  } catch { /* private mode */ }
+  return true;
+}
+
 /** Per-character handling bias, used by the AI and shown on the setup screen. */
 export const CHAR_TUNING = {
   fox: { grip: 1, accel: 1, label: 'Balanced' },
@@ -45,7 +68,7 @@ const ACCENT_RE = /Accent|Trim|Stripe|Seat/i;
  * Assemble a drivable kart. Returns the root group, the tilt sub-group (for
  * lean/pitch), the body model, and a `ud` bag of the parts the visuals touch.
  */
-export function buildKart(A, charId) {
+export function buildKart(A, charId, opts = {}) {
   const char = ROSTER.find((r) => r.id === charId) || ROSTER[0];
 
   // Prefer the dedicated livery, fall back to the recoloured base kart.
@@ -80,6 +103,13 @@ export function buildKart(A, charId) {
     if (!useLivery) {
       if (PAINT_RE.test(id)) mat.color.copy(paintColor);
       else if (ACCENT_RE.test(id)) mat.color.copy(accentColor);
+    }
+    // Champion livery: gold rims earned by winning a Grand Prix.
+    if (opts.gold && /Rim/i.test(mname)) {
+      mat.color.set('#ffd21e');
+      mat.metalness = 1;
+      mat.roughness = 0.3;
+      if (mat.emissive) mat.emissive.set('#3a2a00');
     }
     if (/Paint|Sculpt/i.test(mname)) paintMats.push(mat);
     if (/ExhaustGlow|Headlight|Taillight/i.test(mname)) glowMat = mat;
@@ -126,6 +156,25 @@ export function buildKart(A, charId) {
     body.add(driver);
   }
 
+  // Champion reward: a spinning gold star floats above the kart.
+  let champStar = null;
+  if (opts.gold && A.star) {
+    champStar = A.star.clone(true);
+    champStar.traverse((o) => {
+      if (o.isMesh) {
+        o.castShadow = false;
+        o.material = (Array.isArray(o.material) ? o.material[0] : o.material).clone();
+        o.material.color.set('#ffd21e');
+        if (o.material.emissive) o.material.emissive.set('#7a5200');
+        o.material.metalness = 1;
+        o.material.roughness = 0.25;
+      }
+    });
+    champStar.scale.setScalar(0.55);
+    champStar.position.set(0, 2.6, 0);
+    root.add(champStar);
+  }
+
   const ud = {
     paint: paintMats[0] || null,
     paints: paintMats,
@@ -137,6 +186,7 @@ export function buildKart(A, charId) {
     eyes: driverEyes,
     wob,
     starOn: false,
+    champStar,
   };
 
   return { root, tilt, model: body, ud, wheels };
