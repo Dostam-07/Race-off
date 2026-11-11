@@ -21,10 +21,6 @@ Grand Prix, or online with friends. No install, no account, just play.
 [Controls](#-controls) ·
 [Multiplayer](#-online-multiplayer)
 
-<img src="docs/gameplay.gif" alt="Race-Off gameplay: drifting and boosting through Beach Blast" width="640">
-
-*Live gameplay — weaving and power-drifting through Beach Blast.*
-
 </div>
 
 ---
