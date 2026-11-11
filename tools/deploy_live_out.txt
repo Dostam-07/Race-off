@@ -1,0 +1,61 @@
+> building dist/ ...
+[36mvite v8.3.8 [32mbuilding client environment for production...[36m[39m
+transforming...
+? 72 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                      7.91 kB ¦ gzip:   2.70 kB
+dist/assets/index-Bi_3IPzO.css      34.90 kB ¦ gzip:   8.80 kB
+dist/assets/scores-DyL3J2SF.js       1.27 kB ¦ gzip:   0.78 kB
+dist/assets/shareCard-L0MLxuHU.js    3.33 kB ¦ gzip:   1.59 kB
+dist/assets/index-CYEGGhzv.js      904.89 kB ¦ gzip: 248.94 kB
+
+[32m? built in 337ms[39m
+> opening Netlify authorization in your browser - click APPROVE
+  authorize URL: https://app.netlify.com/authorize?response_type=ticket&ticket=83186b798d0bbd4eae86f7a6ebeeb26e&utm_source=cli&utm_campaign=integrations
+  waiting for approval... (10s)
+  waiting for approval... (20s)
+  waiting for approval... (30s)
+  waiting for approval... (40s)
+  waiting for approval... (50s)
+  waiting for approval... (60s)
+  waiting for approval... (70s)
+  waiting for approval... (80s)
+  waiting for approval... (90s)
+  waiting for approval... (100s)
+  waiting for approval... (110s)
+  waiting for approval... (120s)
+  waiting for approval... (130s)
+  waiting for approval... (140s)
+  waiting for approval... (150s)
+  waiting for approval... (160s)
+  waiting for approval... (170s)
+  waiting for approval... (180s)
+  waiting for approval... (190s)
+  waiting for approval... (200s)
+  waiting for approval... (210s)
+  waiting for approval... (220s)
+  waiting for approval... (230s)
+  waiting for approval... (240s)
+  waiting for approval... (250s)
+  waiting for approval... (260s)
+  waiting for approval... (270s)
+  waiting for approval... (280s)
+  waiting for approval... (290s)
+  waiting for approval... (300s)
+powershell : C:\Users\User4\Downloads\Race-off\tools\deploy_live.ps1 : authorization not approved in time - re-run 
+this script
+At line:2 char:39
++ ... s/Race-off; powershell -ExecutionPolicy Bypass -File tools/deploy_liv ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (C:\Users\User4\...run this script:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+At C:\Users\User4\Downloads\Race-off\tools\deploy_live.ps1:53 char:19
++ ... -not $ok) { Write-Error 'authorization not approved in time - re-run  ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:) [Write-Error], WriteErrorException
+    + FullyQualifiedErrorId : Microsoft.PowerShell.Commands.WriteErrorException,deploy_live.ps1
+ 
+
+LAST TICKET URL: https://app.netlify.com/authorize?response_type=ticket&ticket=83186b798d0bbd4eae86f7a6ebeeb26e&utm_source=cli&utm_campaign=integrations

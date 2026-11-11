@@ -18,8 +18,15 @@ Set-Location (Join-Path $PSScriptRoot '..')
 $npx = 'npx'
 
 function Invoke-Netlify {
-  param([string[]]$Args)
-  & $npx --yes netlify-cli@latest @Args 2>&1 | Out-String
+  param([string[]]$nArgs)
+  # The CLI writes progress/URLs to stderr; with EAP=Stop that would abort.
+  $prev = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  try {
+    & $npx --yes netlify-cli@latest @nArgs 2>&1 | Out-String
+  } finally {
+    $ErrorActionPreference = $prev
+  }
 }
 
 Write-Host '> building dist/ ...' -ForegroundColor Cyan
@@ -27,7 +34,7 @@ npx vite build
 if ($LASTEXITCODE -ne 0) { Write-Error 'build failed'; exit 1 }
 
 # --- 1. authorize (skip if already logged in)
-$who = Invoke-Netlify @('api', 'getCurrentUser') 2>&1
+$who = Invoke-Netlify @('api', 'getCurrentUser')
 if ($LASTEXITCODE -ne 0 -or $who -notmatch '"id"') {
   Write-Host '> opening Netlify authorization in your browser - click APPROVE' -ForegroundColor Yellow
   $out = Invoke-Netlify @('login', '--request', 'Race-Off deploy - approve to publish the game')
@@ -76,3 +83,4 @@ foreach ($p in '/', '/manifest.webmanifest', '/sw.js', '/og-image.jpg', '/icon-1
 }
 if ($fail -gt 0) { Write-Warning "$fail endpoint(s) failed - check the function logs in the Netlify dashboard" }
 else { Write-Host 'LIVE AND HEALTHY - share the link!' -ForegroundColor Green }
+
