@@ -280,6 +280,10 @@ export class Game {
   }
 
   loadTrack(trackId, opts = {}) {
+    // Models must be loaded before anything can touch this.A (decor, karts).
+    // The splash blocks the UI until boot() finishes, so this only guards
+    // against stray early calls - ignore them instead of crashing.
+    if (!this.A) return;
     if (this.track && this.track.def.id === trackId && this.world && opts.reuse) {
       return;
     }

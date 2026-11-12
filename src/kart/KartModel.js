@@ -64,6 +64,24 @@ export const CHAR_TUNING = {
 const PAINT_RE = /Paint|Body|Shell|Chassis|Sculpt/i;
 const ACCENT_RE = /Accent|Trim|Stripe|Seat/i;
 
+/** Last-resort kart body when even the base model failed to load. */
+function fallbackKartMesh(paint, accent) {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(1.1, 0.5, 1.7),
+    new THREE.MeshLambertMaterial({ color: paint }),
+  );
+  body.position.y = 0.45;
+  body.castShadow = true;
+  const seat = new THREE.Mesh(
+    new THREE.BoxGeometry(0.7, 0.35, 0.5),
+    new THREE.MeshLambertMaterial({ color: accent }),
+  );
+  seat.position.set(0, 0.85, -0.2);
+  g.add(body, seat);
+  return g;
+}
+
 /**
  * Assemble a drivable kart. Returns the root group, the tilt sub-group (for
  * lean/pitch), the body model, and a `ud` bag of the parts the visuals touch.
@@ -71,11 +89,15 @@ const ACCENT_RE = /Accent|Trim|Stripe|Seat/i;
 export function buildKart(A, charId, opts = {}) {
   const char = ROSTER.find((r) => r.id === charId) || ROSTER[0];
 
-  // Prefer the dedicated livery, fall back to the recoloured base kart.
+  // Prefer the dedicated livery, fall back to the recoloured base kart, and
+  // finally to a primitive box kart so a missing model can never make a
+  // racer invisible on the grid.
   const liveryKey = kartBodyKey(char.id);
   const useLivery = !!A[liveryKey];
   const src = useLivery ? A[liveryKey] : A.kart;
-  const body = src.clone(true);
+  const body = src
+    ? src.clone(true)
+    : fallbackKartMesh(paintColor, accentColor);
 
   const root = new THREE.Group();
   const tilt = new THREE.Group();
