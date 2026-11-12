@@ -220,7 +220,7 @@ export class Items {
       let d = idx - p.i0;
       if (d < -t.N / 2) d += t.N;
       const k = d + along / t.seg;
-      if (k >= 0 && k <= p.i1 - p.i0 && Math.abs(lat - p.lat) < p.hw + 0.4) {
+      if (k >= 0 && k <= p.i1 - p.i0 && Math.abs(lat - p.lat) < p.hw + 0.2) {
         return RAMP_H * Math.pow(k / (p.i1 - p.i0), 1.4);
       }
     }
@@ -546,7 +546,10 @@ export class Items {
 
           if (!(k.pad > 0)) k.giveBoost(pad.jump ? 0.9 : 1.2, 1.3);
           k.pad = 0.5;
-          if (pad.jump && d >= pad.i1 - pad.i0 - 1 && !k.launch) {
+          // The launch must only fire for karts actually on the ramp surface -
+          // same lateral band as rampY. A wider band launched karts driving
+          // BESIDE a narrow ramp straight off flat road.
+          if (pad.jump && d >= pad.i1 - pad.i0 - 1 && !k.launch && Math.abs(k.lat - pad.lat) < pad.hw + 0.2) {
             k.vy = Math.max(k.vy, 9.6);
             k.onGround = false;
             k.launch = true;
