@@ -56,6 +56,7 @@ export function saveKeymap(map) {
 export class Input {
   constructor(game) {
     this.game = game;
+    this.isTouch = isTouch;
     this.keys = new Set();
     this.pressed = new Set();
     this.released = new Set();
@@ -147,7 +148,12 @@ export class Input {
     });
 
     // ---- touch controls
-    if (isTouch) document.body.classList.add('touch');
+    if (isTouch) {
+      document.body.classList.add('touch');
+      // Touch users have no accelerate button (original design): the kart
+      // auto-throttles during a race unless they hold BRAKE.
+      this.game.autoAccel = true;
+    }
     this.bindTouch();
   }
 
@@ -164,10 +170,12 @@ export class Input {
     };
 
     const move = (e) => {
-      const t = e.touches ? e.touches[0] : e;
-      if (!active || t.identifier !== active && e.touches) {
-        if (e.touches) return;
-      }
+      // Use the touch that started on the pad, not touches[0] - another
+      // finger (drift/brake) must not hijack the steering.
+      const t = e.changedTouches
+        ? Array.from(e.changedTouches).find((x) => x.identifier === active) || e.changedTouches[0]
+        : e;
+      if (active && e.touches && !Array.from(e.touches).some((x) => x.identifier === active)) return;
       const rect = steer.getBoundingClientRect();
       const cx = rect.left + rect.width / 2;
       this.touchSteerRaw = clamp((t.clientX - cx) / (rect.width / 2), -1, 1);

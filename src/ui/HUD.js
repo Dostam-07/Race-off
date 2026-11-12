@@ -6,7 +6,7 @@
 // banners and the big countdown.
 
 import * as THREE from 'three';
-import { clamp, formatTime } from '../core/utils.js';
+import { clamp, formatTime, isTouch } from '../core/utils.js';
 import { ITEM_NAMES } from '../items/Items.js';
 import { EMOTES } from '../net/Net.js';
 
@@ -93,7 +93,7 @@ export class HUD {
     this.countEl = $('count');
     this.posEl = $('pos');
     this.warnEl = $('warn');
-    this.touch = false;
+    this.touch = isTouch;
   }
 
   show(on) {

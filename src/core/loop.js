@@ -253,6 +253,13 @@ const loopMethods = {
 
     // ---- HUD
     this.hud.nameTags(this.karts, this.camera, this.state === 'race');
+    // Touch controls fade in for the race (original: race, or intro past 4.5s).
+    const touchVis = this.input.isTouch &&
+      (this.state === 'race' || (this.state === 'intro' && this.st > 4.5));
+    if (touchVis !== this._touchVis) {
+      this._touchVis = touchVis;
+      document.getElementById('touch')?.classList.toggle('on', touchVis);
+    }
     if (this.state !== 'title') {
       this.hud.setTurbo(player.turbo);
       this.hud.setPos(player.rank);

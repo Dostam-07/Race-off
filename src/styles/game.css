@@ -260,7 +260,7 @@ body.cap #mutechip, body.nohud #hud { display: none !important; }
   .pk.on { transform: scale(1.24) translateY(-4px); box-shadow: 0 0 0 3px #fff, 0 0 20px 4px var(--c); }
   #pick .ph { font-size: 2.8vw; letter-spacing: .8vw; } #pickname { margin-bottom: 3vw; font-size: 8.4vw; }
   #levels { --cw: 29vw; flex-wrap: wrap; row-gap: 3.5vw; padding: 0 12vw; } #levels::before { display: none; } body.solo .logo { --ls: 13vw; } #sgo { gap: 2.6vw; margin-top: 4vw; } #sgo .mbtn.go { font-size: 4.4vw; letter-spacing: .3vw; padding: 3vw 5vw 2.4vw; } .mchip { font-size: 11px; padding: 6px 9px 4px; } .lvl { border-width: 3px; } .lvlcap { font-size: 2.9vw; letter-spacing: .5vw; margin-bottom: 3.4vw; } .hint { display: none; }
-  body.mp .logo { --lw: 54vw; } #modes { gap: 2.6vw; flex-wrap: nowrap; } .mbtn.big { font-size: 3.7vw; letter-spacing: .35vw; padding: 3.4vw 3.8vw 2.8vw; border-width: 3px; }
+  body.mp .logo { --lw: 54vw; } #modes { gap: 2.2vw; flex-wrap: wrap; max-width: 94vw; row-gap: 2.6vw; } .mbtn.big { font-size: 3.7vw; letter-spacing: .35vw; padding: 3.4vw 3.8vw 2.8vw; border-width: 3px; }
   #lobby { width: 92vw; gap: 8px; padding: 10px 10px; } #lobby .mbtn { font-size: 13px; padding: 8px 13px 6px; letter-spacing: 1.5px; } #lobby .mbtn.go { font-size: 20px; padding: 11px 30px 9px; } #lobby .mbtn.ghost { font-size: 11px; }
   #l-room { font-size: 12px; } #l-code { font-size: 22px; letter-spacing: 3px; } .lrow { gap: 8px; } #l-name { width: 132px; padding: 6px 8px 5px; } .lp { height: 34px; font-size: 13px; border-width: 2px; } .lp img { width: 26px; height: 26px; }
   body.mp #pick { margin-bottom: 3vw; } body.mp #pickname { font-size: 6vw; }
@@ -311,6 +311,7 @@ body.touch #touch { display: block; } #touch.on { opacity: 1; } #touch.on > * { 
 #tb-brake { right: 98px; bottom: 92px; width: 56px; height: 56px; font-size: 10px; opacity: .8; }
 #tb-pause { right: max(10px, env(safe-area-inset-right)); top: 9px; width: 38px; height: 38px; border-radius: 12px; font-size: 13px; letter-spacing: 2px; padding-left: 2px; border-width: 2px; }
 body.touch #board, body.touch #itemkey, body.touch #spdtrack { display: none; }
+body.touch #coins { top: 252px; } /* clear of the big touch-mode position readout */
 body.touch #turbo { justify-content: center; margin-top: 8px; font-size: 25px; gap: 9px; } body.touch #turbo i { width: 84px; height: 25px; border-radius: 13px; border-width: 4px; } body.touch #turbo span { -webkit-text-stroke: 8px var(--ink); }
 body.touch #timer { right: calc(58px / var(--hs, 1)); }
 body.touch #pos { left: 26px; top: 104px; bottom: auto; font-size: 118px; -webkit-text-stroke-width: 12px; transform-origin: 20% 20%; }
