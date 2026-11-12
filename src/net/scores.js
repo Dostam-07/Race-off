@@ -68,7 +68,9 @@ export async function fetchScores(track, cc) {
     try {
       const res = await fetch(
         `${base}/scores/${encodeURIComponent(track)}?cc=${cc}`,
-        { signal: AbortSignal.timeout ? AbortSignal.timeout(2500) : undefined },
+        // Same reasoning as directory.js: short timeouts misfire on devices
+        // whose main thread stalls during rendering.
+        { signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : undefined },
       );
       if (res.ok) {
         const data = await res.json();

@@ -42,13 +42,17 @@ export function dirAvailable() {
 const req = async (path, opts = {}) => {
   const b = dirBase();
   // A failed request (timeout, cold serverless start, offline) pauses the
-  // directory for 30s instead of killing it for the whole session.
-  if (!b || (deadAt && Date.now() - deadAt < 30000)) return null;
+  // directory briefly instead of killing it for the whole session.
+  if (!b || (deadAt && Date.now() - deadAt < 10000)) return null;
   try {
     const res = await fetch(b + path, {
       ...opts,
       headers: { 'content-type': 'application/json', ...(opts.headers || {}) },
-      signal: AbortSignal.timeout ? AbortSignal.timeout(6000) : undefined,
+      // Generous on purpose: on weak hardware the main thread can stall for
+      // seconds while the first frames render, which delays response
+      // delivery long after the server has answered. A short timeout here
+      // used to kill quick match on exactly those devices.
+      signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : undefined,
     });
     if (!res.ok) return null;
     deadAt = 0;

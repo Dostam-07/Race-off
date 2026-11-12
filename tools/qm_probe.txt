@@ -1,0 +1,4 @@
+host room: 48JU
+guest dir diag: {"avail":true,"base":"http://localhost:8794","list":["48JU"]}
+quickmatch result: true {"code":"48JU","status":"joined"}
+

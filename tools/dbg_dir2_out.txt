@@ -1,0 +1,19 @@
+  [err] signal timed out
+  [console] [fetch] GET http://localhost:8791/rooms 200 {"rooms":[{"code":"Q82G","gen":0,"level":"beach","phase":"lobby","players":1,"name":""}]}
+  [console] [fetch] POST http://localhost:8791/rooms 200 {"ok":true,"gen":0}
+host room: ZWXH status: open
+  [console] [fetch] POST http://localhost:8791/rooms 200 {"ok":true,"gen":0}
+  [console] [fetch] POST http://localhost:8791/rooms 200 {"ok":true,"gen":0}
+  [err] signal timed out
+  [console] [fetch] GET http://localhost:8791/rooms 200 {"rooms":[{"code":"ZWXH","gen":0,"level":"beach","phase":"lobby","players":1,"name":""}]}
+  [console] [fetch] GET http://localhost:8791/rooms 200 {"rooms":[{"code":"ZWXH","gen":0,"level":"beach","phase":"lobby","players":1,"name":""}]}
+  [console] [fetch] GET http://localhost:8791/rooms 200 {"rooms":[{"code":"ZWXH","gen":0,"level":"beach","phase":"lobby","players":1,"name":""}]}
+  [console] [spy] base: http://localhost:8791 with-hdr: {"rooms":[{"code":"ZWXH","gen":0,"level":"beach","phase":"lobby","players":1,"name":""}]} plain: {"rooms":
+  [console] [fetch] GET http://localhost:8791/rooms 200 {"rooms":[{"code":"ZWXH","gen":0,"level":"beach","phase":"lobby","players":1,"name":""}]}
+  [console] [spy] pre-quickMatch list: ["ZWXH"]
+  [console] [fetch] GET http://localhost:8791/rooms 200 {"rooms":[{"code":"ZWXH","gen":0,"level":"beach","phase":"lobby","players":1,"name":""}]}
+  [console] [spy] joinRoom(ZWXH)
+  [console] [fetch] GET http://localhost:8791/rooms/ZWXH 200 {"code":"ZWXH","gen":0,"level":"beach","phase":"lobby","players":1,"open":true,"public":tr
+  [console] [fetch] POST http://localhost:8791/rooms 200 {"ok":true,"gen":0}
+quick match joined: true
+

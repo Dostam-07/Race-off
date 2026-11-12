@@ -120,8 +120,8 @@ console.log('spectator after race over:', JSON.stringify(afterOver));
 // The host starts race #2; the ex-spectator must now RACE (waiting cleared).
 await host.evaluate(() => window.game.mp?.start());
 let racedAgain = false;
-for (let i = 0; i < 30; i++) {
-  await spec.waitForTimeout(500);
+for (let i = 0; i < 45; i++) {
+  await spec.waitForTimeout(1000);
   racedAgain = await spec.evaluate(() => window.game.state === 'race' && !window.game.spectating);
   if (racedAgain) break;
   if (i === 29) break;
@@ -138,4 +138,5 @@ const ok =
 console.log(ok ? 'SPECTATE OK' : 'SPECTATE FAILED');
 await browser.close();
 process.exit(ok ? 0 : 1);
+
 
