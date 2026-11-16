@@ -10,7 +10,7 @@ import * as THREE from 'three';
  * Render a 160x160 PNG of every icon the UI needs.
  * Returns `{ [key]: dataUrl }` keyed by character id, item name and 'trophy'.
  */
-export function renderIcons(renderer, A, racers) {
+export function renderIcons(renderer, A, racers, portraitDriver) {
   const out = {};
   const scene = new THREE.Scene();
   const cam = new THREE.PerspectiveCamera(30, 1, 0.1, 50);
@@ -40,8 +40,25 @@ export function renderIcons(renderer, A, racers) {
 
   for (const r of racers) {
     const src = A[`driver_${r.id}`];
-    if (!src) continue;
-    shoot(src.clone(true), [0.35, 1.22, 1.55], [0, 1.13, -0.1], r.id);
+    if (src) {
+      shoot(src.clone(true), [0.35, 1.22, 1.55], [0, 1.13, -0.1], r.id);
+      continue;
+    }
+    // No shipped model for this racer: draw the procedural animal bust with
+    // the same framing, so every picker slot has a real face.
+    const model = portraitDriver(r);
+    if (!model) continue;
+    // Frame the procedural bust by its own bounds: these figures are a head
+    // and torso, not a full kart, so the shipped camera would shrink them to
+    // a speck. Normalise to the same visual weight as the GLB portraits.
+    const box = new THREE.Box3().setFromObject(model);
+    const c = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    // Fit the taller of height/width so a head-on bust fills the circle the
+    // way the shipped portraits do.
+    const extent = Math.max(size.y, size.x * 1.15) * 0.5;
+    const d = (extent / Math.tan((cam.fov * Math.PI) / 360)) * 1.34;
+    shoot(model, [c.x + d * 0.12, c.y + d * 0.04, c.z + d], [c.x, c.y, c.z], r.id);
   }
 
   if (A.chili) shoot(A.chili.clone(true), [1, 1.1, 2.6], [0, 0.62, 0], 'chili');

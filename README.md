@@ -125,6 +125,11 @@ A race seats **ten karts**. With eight models, the last two grid slots reuse a
 racer and the scoreboard numbers the repeats (`Luna 2`, `Turbo 2`). Online
 rooms seat up to ten humans; any empty slot is filled by a CPU driver.
 
+The six original racers ship as GLB models. **Rusty** and **Raja** are built
+procedurally in `KartModel.js` — a hound with floppy ears and a snout, and a
+lion with a two-ring mane and tail tuft — and their picker portraits are
+rendered from those figures, so no racer is ever a blank slot.
+
 ## 🗺️ The tracks
 
 | Track | Vibe | Hazard |

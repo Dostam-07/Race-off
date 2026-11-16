@@ -89,35 +89,102 @@ function fallbackKartMesh(paint, accent) {
 /** A blocky driver figure for racers that have no `driver_<id>.glb` yet.
  *  Keeps every kart on the grid looked-inhabited, and reuses the same
  *  `Wob_*` naming so the ear/tail wobble code drives it unchanged. */
-function fallbackDriver(paint, accent) {
+// Turn a species id into a readable animal bust. The six shipped GLB drivers
+// carry their own art; the procedural path exists so adding a racer to the
+// roster never leaves a blank face on the grid or in the picker.
+function mesh(geo, mat, name) {
+  const m = new THREE.Mesh(geo, mat);
+  if (name) m.name = name;
+  m.castShadow = true;
+  return m;
+}
+
+export function fallbackDriver(paint, accent, species) {
   const g = new THREE.Group();
   const skin = new THREE.MeshLambertMaterial({ color: paint });
   const trim = new THREE.MeshLambertMaterial({ color: accent });
+  const dark = new THREE.MeshLambertMaterial({ color: 0x2a1a10 });
+  const eyeMat = new THREE.MeshBasicMaterial({ color: 0x101014 });
+  const white = new THREE.MeshLambertMaterial({ color: 0xf7f2e8 });
 
-  const head = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.4, 0.4), skin);
-  head.name = 'Head';
-  head.position.set(0, 0.52, 0.06);
-  head.castShadow = true;
-
-  const muzzle = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.16, 0.18), trim);
-  muzzle.position.set(0, 0.44, 0.26);
-
-  const eyes = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.07, 0.04), new THREE.MeshBasicMaterial({ color: 0x101014 }));
-  eyes.name = 'Eyes';
-  eyes.position.set(0, 0.58, 0.26);
-
-  const earL = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.2, 0.08), skin);
-  earL.name = 'Wob_EarL';
-  earL.position.set(-0.14, 0.74, 0.05);
-  const earR = earL.clone();
-  earR.name = 'Wob_EarR';
-  earR.position.x = 0.14;
-
-  const torso = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.34, 0.28), trim);
+  // Shared body: every racer is the same seated kart driver.
+  const torso = mesh(new THREE.BoxGeometry(0.36, 0.34, 0.28), trim);
   torso.position.set(0, 0.24, 0);
-  torso.castShadow = true;
+  const head = mesh(new THREE.BoxGeometry(0.42, 0.4, 0.4), skin, 'Head');
+  head.position.set(0, 0.52, 0.06);
+  const eyes = mesh(new THREE.BoxGeometry(0.3, 0.07, 0.04), eyeMat, 'Eyes');
+  eyes.position.set(0, 0.58, 0.26);
+  g.add(head, eyes, torso);
 
-  g.add(head, muzzle, eyes, earL, earR, torso);
+  // Snout / muzzle shared by the canines and the cat.
+  const muzzle = mesh(new THREE.BoxGeometry(0.22, 0.16, 0.18), species === 'lion' ? white : trim);
+  muzzle.position.set(0, 0.44, 0.27);
+  g.add(muzzle);
+  const nose = mesh(new THREE.BoxGeometry(0.08, 0.06, 0.05), dark);
+  nose.position.set(0, 0.49, 0.36);
+  g.add(nose);
+
+  if (species === 'lion') {
+    // --- Raja: a full mane ring, round ears and a tufted tail.
+    const maneGeo = new THREE.TorusGeometry(0.3, 0.11, 8, 18);
+    const mane = mesh(maneGeo, dark);
+    mane.name = 'Mane';
+    mane.position.set(0, 0.55, -0.02);
+    mane.rotation.x = Math.PI / 2;
+    mane.scale.set(1, 1, 1.15);
+    g.add(mane);
+    // A second, offset ring gives the mane depth instead of a flat donut.
+    const mane2 = mane.clone();
+    mane2.position.z = -0.12;
+    mane2.scale.set(0.86, 0.86, 1.3);
+    g.add(mane2);
+
+    const earL = mesh(new THREE.SphereGeometry(0.09, 8, 6), skin, 'Wob_EarL');
+    earL.position.set(-0.2, 0.72, 0.02);
+    earL.scale.set(1, 1, 0.7);
+    const earR = earL.clone();
+    earR.name = 'Wob_EarR';
+    earR.position.x = 0.2;
+    g.add(earL, earR);
+
+    // Gold muzzle scruff + chin tuft.
+    const tuft = mesh(new THREE.BoxGeometry(0.16, 0.1, 0.1), trim);
+    tuft.position.set(0, 0.37, 0.2);
+    g.add(tuft);
+
+    const tail = mesh(new THREE.BoxGeometry(0.07, 0.07, 0.3), skin, 'Wob_Tail');
+    tail.position.set(0, 0.34, -0.22);
+    tail.rotation.x = -0.5;
+    const tip = mesh(new THREE.SphereGeometry(0.075, 8, 6), dark);
+    tip.position.set(0, 0.4, -0.36);
+    g.add(tail, tip);
+  } else {
+    // --- Rusty: long snout, floppy ears that hang down, lighter brow.
+    head.scale.set(1, 0.95, 1.08);
+    const snout = mesh(new THREE.BoxGeometry(0.2, 0.15, 0.16), trim);
+    snout.position.set(0, 0.42, 0.3);
+    g.add(snout);
+    // A pale patch over one eye reads as a hound blaze.
+    const blaze = mesh(new THREE.BoxGeometry(0.16, 0.2, 0.03), white);
+    blaze.position.set(0, 0.58, 0.27);
+    g.add(blaze);
+
+    const earGeo = new THREE.BoxGeometry(0.1, 0.26, 0.13);
+    const earL = mesh(earGeo, skin, 'Wob_EarL');
+    earL.position.set(-0.23, 0.58, 0.03);
+    earL.rotation.z = 0.22;
+    const earR = earL.clone();
+    earR.name = 'Wob_EarR';
+    earR.position.x = 0.23;
+    earR.rotation.z = -0.22;
+    g.add(earL, earR);
+
+    const tail = mesh(new THREE.BoxGeometry(0.07, 0.07, 0.28), skin, 'Wob_Tail');
+    tail.position.set(0, 0.34, -0.2);
+    tail.rotation.x = -0.9;
+    g.add(tail);
+  }
+
   return g;
 }
 
@@ -196,7 +263,7 @@ export function buildKart(A, charId, opts = {}) {
   if (driverSrc) {
     driver = driverSrc.clone(true);
   } else {
-    driver = fallbackDriver(char.paint, char.accent);
+    driver = fallbackDriver(char.paint, char.accent, char.id);
   }
   {
     driver.traverse((o) => {

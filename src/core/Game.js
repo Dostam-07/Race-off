@@ -15,7 +15,7 @@ import { terrainMaterial, grainTexture } from '../world/materials.js';
 import { buildDecor } from '../world/decor.js';
 import { FX } from '../fx/FX.js';
 import { Kart } from '../kart/Kart.js';
-import { makeBlobShadow, ROSTER } from '../kart/KartModel.js';
+import { makeBlobShadow, ROSTER, fallbackDriver } from '../kart/KartModel.js';
 import { Items } from '../items/Items.js';
 import { AudioEngine } from '../audio/AudioEngine.js';
 import { HUD } from '../ui/HUD.js';
@@ -218,7 +218,7 @@ export class Game {
 
   async boot(onProgress) {
     this.A = await loadModels(onProgress);
-    this.icons = renderIcons(this.renderer, this.A, ROSTER);
+    this.icons = renderIcons(this.renderer, this.A, ROSTER, (r) => fallbackDriver(r.paint, r.accent, r.id));
     this.resize();
     this.fx.setPointScale(innerHeight * 0.62);
 
