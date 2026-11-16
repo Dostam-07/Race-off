@@ -117,6 +117,7 @@ const raceFlow = {
     this.noItems = false;
     this.battle = null;
     this.elim = null;
+    this.team = null;
     const id = trackId || this.currentTrackId || 'beach';
     this.currentTrackId = id;
     this.loadTrack(id);
@@ -133,6 +134,7 @@ const raceFlow = {
     this.noItems = true; // must be set before loadTrack - Items builds there
     this.battle = null;
     this.elim = null;
+    this.team = null;
     const id = trackId || this.currentTrackId || 'beach';
     this.currentTrackId = id;
     this.loadTrack(id);
@@ -149,6 +151,7 @@ const raceFlow = {
     this.noItems = false;
     this.battle = { time: 120, over: false, order: [], playerOut: false };
     this.elim = null;
+    this.team = null;
     const id = arenaId || 'arena1';
     this.currentTrackId = id;
     this.loadTrack(id);
@@ -179,6 +182,7 @@ const raceFlow = {
     this.daily = { key: d.key };
     this.battle = null;
     this.elim = null;
+    this.team = null;
     this.dailyKey = d.key;
     this.dailyCfg = d;
     this.cc = d.cc;
@@ -192,6 +196,67 @@ const raceFlow = {
     const label =
       this.track.def.name + (d.cc === 0.85 ? ' - 50CC' : d.cc === 1.15 ? ' - 150CC' : '') + (d.mirror ? ' - MIRROR' : '');
     this.hud.toast('DAILY: ' + label, 'gold', 3);
+  },
+
+  /** Team race: 3 v 3 (or as evenly as the field allows). Every finish banks
+   *  points for the whole team, so the leaderboard sorts by team total. */
+  startTeamRace(trackId) {
+    this.audio.resume();
+    this.cup = null;
+    this.daily = null;
+    this.timeTrial = false;
+    this.noItems = false;
+    this.battle = null;
+    this.elim = null;
+    this.team = { pts: { red: 0, blue: 0 }, members: { red: [], blue: [] } };
+    const id = trackId || this.currentTrackId || 'beach';
+    this.currentTrackId = id;
+    this.loadTrack(id);
+    this.buildField(this.pickChar());
+    this.assignTeams();
+    this.beginIntro();
+  },
+
+  /** Split the field into two teams, alternating by grid slot so the sides
+   *  are balanced. The player's team is always called 'red'. */
+  assignTeams() {
+    const team = this.team;
+    team.pts = { red: 0, blue: 0 };
+    team.members = { red: [], blue: [] };
+    const blueFirst = Math.random() < 0.5;
+    this.karts.forEach((k, i) => {
+      // Alternate sides, but the player always lands on red.
+      let side = (i % 2 === 0) === blueFirst ? 'blue' : 'red';
+      if (k.isPlayer) side = 'red';
+      k.team = side;
+      team.members[side].push(k);
+    });
+    // If the player's side ended up lopsided, move the tail of blue over.
+    const diff = team.members.blue.length - team.members.red.length;
+    if (diff > 1) {
+      const moved = team.members.blue.splice(1);
+      for (const k of moved) {
+        k.team = 'red';
+        team.members.red.push(k);
+      }
+      this._teamRebalanced = true;
+    }
+  },
+
+  /** Team standings for the HUD/results: [{id, pts, karts}] sorted by points. */
+  teamStandings() {
+    if (!this.team) return [];
+    return ['red', 'blue']
+      .map((id) => ({ id, pts: this.team.pts[id] || 0, karts: this.team.members[id] || [] }))
+      .sort((a, b) => b.pts - a.pts || a.id.localeCompare(b.id));
+  },
+
+  /** Which team is ahead right now, by summed live progress. */
+  teamLiveLeaders() {
+    if (!this.team) return { red: 0, blue: 0 };
+    const sum = { red: 0, blue: 0 };
+    for (const k of this.karts) if (k.team) sum[k.team] += k.progress;
+    return sum;
   },
 
   startCupOrTrack(mode) {
@@ -223,6 +288,7 @@ const raceFlow = {
     this.daily = null;
     this.battle = null;
     this.elim = null;
+    this.team = null;
     this.audio.resume();
     this.loadTrack(id);
     this.buildField(this.pickChar());
@@ -297,6 +363,11 @@ const raceFlow = {
       kart.finished = true;
       kart.finishTime = this.raceTime;
       this.finishedCount = this.ranked.filter((k) => k.finished).length;
+      // Team race: every finisher banks its place-points for the whole side.
+      if (this.team && kart.team) {
+        const gain = POINTS[Math.min(this.finishedCount - 1, POINTS.length - 1)] ?? 0;
+        this.team.pts[kart.team] += gain;
+      }
       if (kart.isPlayer) {
         // The final lap still counts for the personal best.
         if (this.pendingTTLap != null) {
@@ -620,7 +691,8 @@ const raceFlow = {
     }
     this.hud.results(this.ranked, this.player, this.lapTimes, '', false, cup,
       this.timeTrial ? (this.newRecord ? 'NEW RECORD!' : 'TIME TRIAL!') : null,
-      this.battle ? 'battle' : this.elim ? 'elim' : null);
+      this.battle ? 'battle' : this.elim ? 'elim' : this.team ? 'team' : null,
+      this.team ? this.teamStandings() : null);
     // Fit the panel now that its content (and real height) is known.
     this.fitUI();
     this.menus.hideResults = null;
@@ -684,6 +756,7 @@ const raceFlow = {
     this.hud.hideResults();
     if (this.battle) return this.startBattle();
     if (this.elim) return this.startElimination();
+    if (this.team) return this.startTeamRace();
     if (this.cup) {
       this.cup.race = Math.max(0, this.cup.race - 1);
       return this.startCupRace();
@@ -695,6 +768,7 @@ const raceFlow = {
     this.cup = null;
     this.battle = null;
     this.elim = null;
+    this.team = null;
     this.hud.show(false);
     this.hud.hideResults();
     this.audio.stopMusic();

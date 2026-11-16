@@ -561,11 +561,26 @@ export class HUD {
   }
 
   // --------------------------------------------------------------- results
-  results(ranked, player, lapTimes = [], hint = '', quit = false, cup = null, headOverride = null, battle = null) {
+  results(ranked, player, lapTimes = [], hint = '', quit = false, cup = null, headOverride = null, battle = null, teams = null) {
     const el = $('results');
     const best = lapTimes.length ? Math.min(...lapTimes) : 0;
     let place = player.rank;
     let head = headOverride;
+
+    // Team race: the winner is the team, not the individual.
+    let teamHead = null;
+    if (teams && teams.length === 2) {
+      const mine = teams.find((t) => t.id === (player.team || 'red'));
+      const theirs = teams.find((t) => t.id !== (player.team || 'red'));
+      const won = mine && theirs ? mine.pts > theirs.pts : false;
+      const drew = mine && theirs ? mine.pts === theirs.pts : false;
+      teamHead = drew
+        ? `TEAM DRAW ${mine?.pts ?? 0}-${theirs?.pts ?? 0}`
+        : won
+          ? `TEAM VICTORY! ${mine?.pts ?? 0}-${theirs?.pts ?? 0}`
+          : `TEAM DEFEAT ${mine?.pts ?? 0}-${theirs?.pts ?? 0}`;
+      head = teamHead;
+    }
 
     if (battle === 'battle') {
       head = place === 1 ? 'VICTORY!' : `POPPED! ${ordinal(place)}`;
@@ -596,16 +611,21 @@ export class HUD {
         ? (k.eliminated ? '\u{1F494} OUT' : '\u{1F388}'.repeat(k.balloons || 0))
         : battle === 'elim'
           ? (k.eliminated ? '\u{1F4A5} OUT' : k.finishTime > 0 ? formatTime(k.finishTime) : '\u2014')
+          : teams ? (k.team === 'red' ? '\u{1F534} RED' : '\u{1F535} BLUE')
           : cup ? (cup.final ? '' : `<i>+${cup.gain[cup.key(k)]}</i>`) + `<b>${cup.pts[cup.key(k)]}</b> PTS`
           : k.finished ? formatTime(k.finishTime) : '\u2014';
-      html += `<div class="rr${k === player ? ' me' : ''} m${i + 1}" style="--c:${k.def.css};animation-delay:${i * 0.09}s"><span class="n">${i + 1}</span><img src="${this.icons[k.def.id] || ''}" alt=""><span class="nm">${this.names[k.def.id] || k.def.name}</span><span class="t">${stat}</span></div>`;
+      // Team races tint each row with its side colour.
+      const css = teams ? (k.team === 'red' ? '#ff4b57' : '#3b82ff') : k.def.css;
+      html += `<div class="rr${k === player ? ' me' : ''} m${i + 1}" style="--c:${css};animation-delay:${i * 0.09}s"><span class="n">${i + 1}</span><img src="${this.icons[k.def.id] || ''}" alt=""><span class="nm">${this.names[k.def.id] || k.def.name}</span><span class="t">${stat}</span></div>`;
     });
 
     html += battle === 'battle'
       ? `<div class="laps"><span>\u{1F388} BALLOON BRAWL</span><span><img src="${this.icons.coin || ''}" alt=""><b>${player.coins}</b></span></div>`
       : battle === 'elim'
         ? `<div class="laps"><span>\u{1F4A5} ELIMINATION</span><span><img src="${this.icons.coin || ''}" alt=""><b>${player.coins}</b></span></div>`
-        : `<div class="laps">${lapTimes.map((t, i) => `<span class="${t === best ? 'best' : ''}">LAP ${i + 1} <b>${formatTime(t)}</b></span>`).join('')}<span><img src="${this.icons.coin || ''}" alt=""><b>${player.coins}</b></span></div>`;
+        : teams
+          ? `<div class="laps"><span>\u{1F534} RED <b>${teams.find((t) => t.id === 'red')?.pts ?? 0}</b></span><span>\u{1F535} BLUE <b>${teams.find((t) => t.id === 'blue')?.pts ?? 0}</b></span><span><img src="${this.icons.coin || ''}" alt=""><b>${player.coins}</b></span></div>`
+          : `<div class="laps">${lapTimes.map((t, i) => `<span class="${t === best ? 'best' : ''}">LAP ${i + 1} <b>${formatTime(t)}</b></span>`).join('')}<span><img src="${this.icons.coin || ''}" alt=""><b>${player.coins}</b></span></div>`;
     html += `<div class="rshare"><div id="r-share" class="mbtn">SHARE RESULT</div></div>`;
     if (this.game?.timeTrial) html += `<div class="lboard" id="lboard"><div class="lb-h">TOP TIMES</div><div class="lb-body" id="lboard-body">\u2026</div></div>`;
     html += `<div class="again">${hint || (this.touch ? 'TAP TO RACE AGAIN' : 'PRESS ENTER TO RACE AGAIN')}</div>`;

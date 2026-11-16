@@ -72,6 +72,35 @@ export function syncKart(kart, dt) {
     kart.bubble.rotation.x = g.time * 0.9;
   }
 
+  // Team race: a coloured ring under the kart marks the side. Chassis and
+  // livery stay untouched so each racer still looks like itself.
+  if (kart.team) {
+    if (!kart.teamRing) {
+      const ring = new THREE.Mesh(
+        new THREE.RingGeometry(1.15, 1.75, 24),
+        new THREE.MeshBasicMaterial({
+          color: kart.team === 'red' ? 0xff4b57 : 0x3b82ff,
+          transparent: true,
+          opacity: 0.55,
+          depthWrite: false,
+          side: THREE.DoubleSide,
+          fog: false,
+        }),
+      );
+      ring.rotation.x = -Math.PI / 2;
+      ring.position.y = 0.06;
+      ring.renderOrder = 1;
+      kart.root.add(ring);
+      kart.teamRing = ring;
+    }
+    kart.teamRing.material.opacity = 0.4 + 0.22 * Math.sin(g.time * 4.2);
+  } else if (kart.teamRing) {
+    kart.root.remove(kart.teamRing);
+    kart.teamRing.geometry.dispose();
+    kart.teamRing.material.dispose();
+    kart.teamRing = null;
+  }
+
   // Star power: rainbow emissive on the paint.
   if (ud && ud.paint) {
     if (kart.star > 0) {

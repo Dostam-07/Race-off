@@ -36,9 +36,12 @@ reason to come back, and smoother community features.
    finish order then reverse pop order, LAST KART STANDING! / ELIMINATED!
    banners, results variant with 💥 OUT rows, rematch flow.)*
    Still open: shorter clock at higher engine classes, MP lobby flag.
-3. **Team race** — 3v3 with team colours on karts and a combined team score
-   in the results panel. Pairs naturally with the public room list
-   (`team: true` room flag).
+3. **Team race** ✅ *(shipped: pick TEAM on the track picker; field splits
+   5v5 by grid slot with the player always red, pulsing red/blue under-kart
+   rings, place points banked per side on every finish, results lead with
+   TEAM VICTORY/DEFEAT + per-row side colours and a two-team footer, rematch
+   flow. Reuses the existing POINTS table so team and GP maths agree.)*
+   Still open: online MP lobby `team: true` flag, team-tinted liveries.
 4. **Ghost championships** — the daily challenge keeps your best ghost;
    race *your own* ghost head-to-head on every track, not just time trial.
 5. **More tracks** — a night neon circuit (emissive materials + headlight

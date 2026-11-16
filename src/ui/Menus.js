@@ -20,6 +20,7 @@ export class Menus {
     this.tt = false;
     this.battle = false;
     this.elim = false;
+    this.team = false;
     this.cc = 1;
     this.mirror = false;
     this.lastFocus = null;
@@ -110,6 +111,7 @@ export class Menus {
       if (this.tt && this.mode !== 'gp') g.startTimeTrial(this.mode);
       else if (this.battle) g.startBattle(this.mode);
       else if (this.elim) g.startElimination(this.mode);
+      else if (this.team) g.startTeamRace(this.mode);
       else g.startCupOrTrack(this.mode);
     });
 
@@ -147,6 +149,7 @@ export class Menus {
         this.tt = el.dataset.tt === '1';
         this.battle = el.dataset.battle === '1';
         this.elim = el.dataset.elim === '1';
+        this.team = el.dataset.team === '1';
         document.querySelectorAll('#ttmode .mchip').forEach((e) =>
           e.classList.toggle('on', e === el));
         this.filterLevels();
@@ -351,12 +354,13 @@ export class Menus {
   updateGoLabel(trackName) {
     const go = $('m-go');
     if (!go) return;
-    if (this.mode === 'gp' && !this.tt && !this.battle && !this.elim) go.textContent = 'START GRAND PRIX';
+    if (this.mode === 'gp' && !this.tt && !this.battle && !this.elim && !this.team) go.textContent = 'START GRAND PRIX';
     else {
       const name = trackName || document.querySelector('#cup .lvl.on b')?.textContent || 'RACE';
       go.textContent = this.battle ? `BATTLE: ${name}`
         : this.tt ? `TIME TRIAL: ${name}`
         : this.elim ? `ELIMINATION: ${name}`
+        : this.team ? `TEAM RACE: ${name}`
         : `START ${name}`;
     }
   }
@@ -366,7 +370,7 @@ export class Menus {
    *  GO button can never start a grand prix in a per-track mode. */
   filterLevels() {
     const lvls = document.querySelectorAll('#cup .lvl');
-    const perTrack = this.tt || this.battle || this.elim;
+    const perTrack = this.tt || this.battle || this.elim || this.team;
     lvls.forEach((e) => {
       const arena = e.classList.contains('arena');
       e.hidden = this.battle ? !arena : arena || (perTrack && e.classList.contains('gp'));
@@ -388,7 +392,8 @@ export class Menus {
     document.querySelectorAll('#ttmode .mchip').forEach((e) =>
       e.classList.toggle('on', (e.dataset.tt === '1') === !!this.tt
         && (e.dataset.battle === '1') === !!this.battle
-        && (e.dataset.elim === '1') === !!this.elim));
+        && (e.dataset.elim === '1') === !!this.elim
+        && (e.dataset.team === '1') === !!this.team));
     this.filterLevels();
     const first = document.querySelector('#cup .lvl.on') || document.querySelector('#cup .lvl:not([hidden])');
     if (first) {
