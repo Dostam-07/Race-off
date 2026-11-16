@@ -3,6 +3,7 @@
 // Boots the game, wires the loading bar, then hands control to the state
 // machine in Game.js.
 
+import * as THREE from 'three';
 import './styles/game.css';
 import { Game } from './core/Game.js';
 import { installRaceFlow } from './core/raceFlow.js';
@@ -44,6 +45,8 @@ async function main() {
   const params = new URLSearchParams(location.search);
   const game = new Game(document.body, { quality: detectQuality(params) });
   window.game = game;
+  // Debug/diagnostics handle for probes and asset measuring.
+  window.THREE = THREE;
   // Debug/diagnostics handle for the directory client (used by tests).
   window.__dir = dir;
 

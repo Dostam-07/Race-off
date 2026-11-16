@@ -92,100 +92,178 @@ function fallbackKartMesh(paint, accent) {
 // Turn a species id into a readable animal bust. The six shipped GLB drivers
 // carry their own art; the procedural path exists so adding a racer to the
 // roster never leaves a blank face on the grid or in the picker.
-function mesh(geo, mat, name) {
-  const m = new THREE.Mesh(geo, mat);
-  if (name) m.name = name;
+// --- procedural racers -------------------------------------------------------
+//
+// The six original racers ship as GLB models and share one silhouette: a
+// seated body group plus a head group, standing about 1.3 units tall with the
+// body resting at y = 0.23, so the head sits clear of the steering wheel. A
+// racer added to the roster without art must match those proportions or it
+// reads as sunk into the seat - so this builder mirrors the same measurements
+// while adding rounded, cartoonier forms than plain boxes.
+
+const SHAPES = new Map();
+function geo(key, make) {
+  let g = SHAPES.get(key);
+  if (!g) { g = make(); SHAPES.set(key, g); }
+  return g;
+}
+
+function part(parent, g, mat, [x, y, z], name, rot, scale) {
+  const m = new THREE.Mesh(g, mat);
   m.castShadow = true;
+  m.position.set(x, y, z);
+  if (rot) m.rotation.set(rot[0], rot[1], rot[2]);
+  if (scale) m.scale.set(scale[0], scale[1], scale[2]);
+  if (name) m.name = name;
+  parent.add(m);
   return m;
 }
 
+/**
+ * Build a seated animal racer. Matches the shipped drivers' scale (body from
+ * y 0.23, total height ~1.3-1.6) so every racer sits in the kart the same way.
+ * Cartoon treatment: rounded capsules, big eyes, soft muzzle - not box parts.
+ */
 export function fallbackDriver(paint, accent, species) {
-  const g = new THREE.Group();
+  const root = new THREE.Group();
+  // Shipped racers put the head between y 0.9 and 1.8 after the kart's 0.02
+  // seat offset. Author at the same height so nobody looks sunk in the seat.
+  root.scale.setScalar(1.1);
   const skin = new THREE.MeshLambertMaterial({ color: paint });
   const trim = new THREE.MeshLambertMaterial({ color: accent });
-  const dark = new THREE.MeshLambertMaterial({ color: 0x2a1a10 });
-  const eyeMat = new THREE.MeshBasicMaterial({ color: 0x101014 });
-  const white = new THREE.MeshLambertMaterial({ color: 0xf7f2e8 });
+  const dark = new THREE.MeshLambertMaterial({ color: 0x241a13 });
+  const eyeMat = new THREE.MeshBasicMaterial({ color: 0x14131a });
+  const glintMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const cream = new THREE.MeshLambertMaterial({ color: 0xf6efe2 });
 
-  // Shared body: every racer is the same seated kart driver.
-  const torso = mesh(new THREE.BoxGeometry(0.36, 0.34, 0.28), trim);
-  torso.position.set(0, 0.24, 0);
-  const head = mesh(new THREE.BoxGeometry(0.42, 0.4, 0.4), skin, 'Head');
-  head.position.set(0, 0.52, 0.06);
-  const eyes = mesh(new THREE.BoxGeometry(0.3, 0.07, 0.04), eyeMat, 'Eyes');
-  eyes.position.set(0, 0.58, 0.26);
-  g.add(head, eyes, torso);
+  const isLion = species === 'lion';
 
-  // Snout / muzzle shared by the canines and the cat.
-  const muzzle = mesh(new THREE.BoxGeometry(0.22, 0.16, 0.18), species === 'lion' ? white : trim);
-  muzzle.position.set(0, 0.44, 0.27);
-  g.add(muzzle);
-  const nose = mesh(new THREE.BoxGeometry(0.08, 0.06, 0.05), dark);
-  nose.position.set(0, 0.49, 0.36);
-  g.add(nose);
+  // --- BODY: the seated torso, the same group the shipped drivers use.
+  const body = new THREE.Group();
+  body.name = 'Body';
+  body.position.set(0, 0.23, 0);
+  root.add(body);
 
-  if (species === 'lion') {
-    // --- Raja: a full mane ring, round ears and a tufted tail.
-    const maneGeo = new THREE.TorusGeometry(0.3, 0.11, 8, 18);
-    const mane = mesh(maneGeo, dark);
-    mane.name = 'Mane';
-    mane.position.set(0, 0.55, -0.02);
-    mane.rotation.x = Math.PI / 2;
-    mane.scale.set(1, 1, 1.15);
-    g.add(mane);
-    // A second, offset ring gives the mane depth instead of a flat donut.
-    const mane2 = mane.clone();
-    mane2.position.z = -0.12;
-    mane2.scale.set(0.86, 0.86, 1.3);
-    g.add(mane2);
+  const torso = part(
+    body,
+    geo('torso', () => new THREE.CapsuleGeometry(0.2, 0.26, 6, 14)),
+    trim, [0, 0.28, 0],
+  );
+  torso.scale.set(1.06, 1, 0.92);
 
-    const earL = mesh(new THREE.SphereGeometry(0.09, 8, 6), skin, 'Wob_EarL');
-    earL.position.set(-0.2, 0.72, 0.02);
-    earL.scale.set(1, 1, 0.7);
-    const earR = earL.clone();
-    earR.name = 'Wob_EarR';
-    earR.position.x = 0.2;
-    g.add(earL, earR);
-
-    // Gold muzzle scruff + chin tuft.
-    const tuft = mesh(new THREE.BoxGeometry(0.16, 0.1, 0.1), trim);
-    tuft.position.set(0, 0.37, 0.2);
-    g.add(tuft);
-
-    const tail = mesh(new THREE.BoxGeometry(0.07, 0.07, 0.3), skin, 'Wob_Tail');
-    tail.position.set(0, 0.34, -0.22);
-    tail.rotation.x = -0.5;
-    const tip = mesh(new THREE.SphereGeometry(0.075, 8, 6), dark);
-    tip.position.set(0, 0.4, -0.36);
-    g.add(tail, tip);
-  } else {
-    // --- Rusty: long snout, floppy ears that hang down, lighter brow.
-    head.scale.set(1, 0.95, 1.08);
-    const snout = mesh(new THREE.BoxGeometry(0.2, 0.15, 0.16), trim);
-    snout.position.set(0, 0.42, 0.3);
-    g.add(snout);
-    // A pale patch over one eye reads as a hound blaze.
-    const blaze = mesh(new THREE.BoxGeometry(0.16, 0.2, 0.03), white);
-    blaze.position.set(0, 0.58, 0.27);
-    g.add(blaze);
-
-    const earGeo = new THREE.BoxGeometry(0.1, 0.26, 0.13);
-    const earL = mesh(earGeo, skin, 'Wob_EarL');
-    earL.position.set(-0.23, 0.58, 0.03);
-    earL.rotation.z = 0.22;
-    const earR = earL.clone();
-    earR.name = 'Wob_EarR';
-    earR.position.x = 0.23;
-    earR.rotation.z = -0.22;
-    g.add(earL, earR);
-
-    const tail = mesh(new THREE.BoxGeometry(0.07, 0.07, 0.28), skin, 'Wob_Tail');
-    tail.position.set(0, 0.34, -0.2);
-    tail.rotation.x = -0.9;
-    g.add(tail);
+  // Arms reaching forward to the wheel, with paws on the rim. Without these
+  // the figure just floats in the seat instead of driving the kart.
+  for (const sx of [-1, 1]) {
+    const arm = part(body, geo('arm', () => new THREE.CapsuleGeometry(0.062, 0.2, 4, 10)),
+      skin, [sx * 0.19, 0.36, 0.1]);
+    arm.rotation.set(-0.85, 0, sx * 0.16);
+    // Paw gripping the wheel.
+    part(body, geo('paw', () => new THREE.SphereGeometry(0.075, 12, 10)), skin,
+      [sx * 0.16, 0.3, 0.27], null, [1, 0.9, 1.1]);
   }
 
-  return g;
+  // --- HEAD: the shipped racers keep head parts under a `Head` group so the
+  // visuals can bob it; keep that contract.
+  const head = new THREE.Group();
+  head.name = 'Head';
+  head.position.set(0, 0.80, 0.02);
+  root.add(head);
+
+  const skullGeo = geo('skull', () => new THREE.SphereGeometry(0.26, 20, 16));
+  const skull = part(head, skullGeo, skin, [0, 0.18, 0]);
+  skull.scale.set(1, 0.96, 0.98);
+
+  // Muzzle: a rounded snout that pushes forward from the skull.
+  const muzzle = part(head, geo('muzzle', () => new THREE.SphereGeometry(0.13, 16, 12)),
+    isLion ? cream : trim, [0, 0.1, 0.2]);
+  muzzle.scale.set(1.16, 0.82, 1.0);
+
+  // Nose pad.
+  part(head, geo('nose', () => new THREE.SphereGeometry(0.052, 12, 10)), dark,
+    [0, 0.14, 0.31], null, [1.3, 0.9, 1]);
+
+  // Eyes: big and round with a specular dot - this is what sells the face.
+  const eyeGeo = geo('eye', () => new THREE.SphereGeometry(0.055, 14, 12));
+  const glintGeo = geo('glint', () => new THREE.SphereGeometry(0.018, 8, 8));
+  for (const sx of [-1, 1]) {
+    part(head, eyeGeo, eyeMat, [sx * 0.1, 0.23, 0.21], 'Eyes');
+    part(head, glintGeo, glintMat, [sx * 0.1 + 0.018, 0.248, 0.252]);
+  }
+
+  if (isLion) {
+    // Raja: a shaggy mane built from overlapping cones around the face.
+    const maneGroup = new THREE.Group();
+    maneGroup.name = 'Mane';
+    maneGroup.position.set(0, 0.0, -0.06);
+    head.add(maneGroup);
+    const tuft = geo('tuft', () => new THREE.ConeGeometry(0.1, 0.26, 8));
+    const rings = [
+      { r: 0.3, n: 12, y: 0.18, lean: 0.55 },
+      { r: 0.34, n: 14, y: 0.05, lean: 0.9 },
+      { r: 0.3, n: 11, y: 0.32, lean: 0.3 },
+    ];
+    for (const ring of rings) {
+      for (let i = 0; i < ring.n; i++) {
+        const a = (i / ring.n) * Math.PI * 2 + ring.y;
+        const m = part(maneGroup, tuft, dark,
+          [Math.cos(a) * ring.r, ring.y, Math.sin(a) * ring.r * 0.72]);
+        // Point each cone outward, away from the face.
+        m.rotation.set(ring.lean, 0, -a + Math.PI / 2);
+      }
+    }
+    // Round ears poking above the mane.
+    const earGeo = geo('earRound', () => new THREE.SphereGeometry(0.085, 12, 10));
+    for (const sx of [-1, 1]) {
+      const e = part(head, earGeo, skin, [sx * 0.2, 0.4, -0.02], sx < 0 ? 'Wob_EarL' : 'Wob_EarR');
+      e.scale.set(1, 1, 0.55);
+      part(head, earGeo, cream, [sx * 0.2, 0.4, 0.02], null, [0.55, 0.55, 0.3]);
+    }
+    // Chin scruff + tail.
+    part(head, geo('scruff', () => new THREE.SphereGeometry(0.1, 12, 10)), trim,
+      [0, -0.02, 0.12], null, [1, 0.7, 0.8]);
+    const tail = part(body, geo('tail', () => new THREE.CapsuleGeometry(0.045, 0.3, 4, 10)),
+      skin, [0, 0.42, -0.24], 'Wob_Tail', [-0.5, 0, 0]);
+    const tip = part(body, geo('tailtip', () => new THREE.SphereGeometry(0.07, 12, 10)),
+      dark, [0, 0.54, -0.36]);
+    tip.name = 'Wob_TailTip';
+  } else {
+    // Rusty: long snout, floppy ears hanging past the jaw, pale blaze.
+    muzzle.scale.set(1.0, 0.75, 1.35);
+    muzzle.position.set(0, 0.08, 0.23);
+    part(head, geo('snoutTip', () => new THREE.SphereGeometry(0.1, 14, 12)), trim,
+      [0, 0.09, 0.3], null, [1.05, 0.8, 1.1]);
+    // Blaze between the eyes.
+    part(head, geo('blaze', () => new THREE.SphereGeometry(0.075, 12, 10)), cream,
+      [0, 0.27, 0.19], null, [0.7, 1.5, 0.5]);
+
+    // Floppy ears: flattened capsules that HANG from the sides of the skull
+    // and hang past the jaw, the way a hound's do. Anchored high on the head
+    // and angled outward so the tips droop below the muzzle line.
+    const earGeo = geo('earFloppy', () => new THREE.CapsuleGeometry(0.085, 0.24, 5, 10));
+    for (const sx of [-1, 1]) {
+      const ear = new THREE.Group();
+      ear.name = sx < 0 ? 'Wob_EarL' : 'Wob_EarR';
+      ear.position.set(sx * 0.21, 0.34, 0.0);
+      head.add(ear);
+      const e = new THREE.Mesh(earGeo, trim);
+      e.castShadow = true;
+      // Hangs down and slightly out from the pivot.
+      e.position.set(sx * 0.05, -0.15, 0.0);
+      e.rotation.z = sx * 0.30;
+      e.scale.set(0.5, 1.15, 1.0);
+      ear.add(e);
+    }
+
+    const tail = part(body, geo('dogtail', () => new THREE.CapsuleGeometry(0.04, 0.26, 4, 10)),
+      skin, [0, 0.44, -0.18], 'Wob_Tail', [-1.0, 0, 0]);
+    tail.scale.set(1, 1, 1);
+  }
+
+  // Brow ridge gives both species a determined expression.
+  part(head, geo('brow', () => new THREE.BoxGeometry(0.24, 0.03, 0.05)), skin,
+    [0, 0.3, 0.2], null, [1, 1, 1]);
+
+  return root;
 }
 
 /**

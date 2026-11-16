@@ -48,17 +48,16 @@ export function renderIcons(renderer, A, racers, portraitDriver) {
     // the same framing, so every picker slot has a real face.
     const model = portraitDriver(r);
     if (!model) continue;
-    // Frame the procedural bust by its own bounds: these figures are a head
-    // and torso, not a full kart, so the shipped camera would shrink them to
-    // a speck. Normalise to the same visual weight as the GLB portraits.
-    const box = new THREE.Box3().setFromObject(model);
+    // Frame on the HEAD, not the whole body: these portraits are avatars, and
+    // the shipped GLB icons crop close on the face too. Framing the torso
+    // would leave a tiny figure floating in a mostly empty circle.
+    const headObj = model.getObjectByName('Head') || model;
+    const box = new THREE.Box3().setFromObject(headObj);
     const c = box.getCenter(new THREE.Vector3());
     const size = box.getSize(new THREE.Vector3());
-    // Fit the taller of height/width so a head-on bust fills the circle the
-    // way the shipped portraits do.
-    const extent = Math.max(size.y, size.x * 1.15) * 0.5;
-    const d = (extent / Math.tan((cam.fov * Math.PI) / 360)) * 1.34;
-    shoot(model, [c.x + d * 0.12, c.y + d * 0.04, c.z + d], [c.x, c.y, c.z], r.id);
+    const extent = Math.max(size.y, size.x) * 0.5;
+    const d = (extent / Math.tan((cam.fov * Math.PI) / 360)) * 1.22;
+    shoot(model, [c.x + d * 0.1, c.y + d * 0.05, c.z + d], [c.x, c.y, c.z], r.id);
   }
 
   if (A.chili) shoot(A.chili.clone(true), [1, 1.1, 2.6], [0, 0.62, 0], 'chili');

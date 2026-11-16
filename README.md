@@ -126,9 +126,13 @@ racer and the scoreboard numbers the repeats (`Luna 2`, `Turbo 2`). Online
 rooms seat up to ten humans; any empty slot is filled by a CPU driver.
 
 The six original racers ship as GLB models. **Rusty** and **Raja** are built
-procedurally in `KartModel.js` — a hound with floppy ears and a snout, and a
-lion with a two-ring mane and tail tuft — and their picker portraits are
-rendered from those figures, so no racer is ever a blank slot.
+procedurally in `KartModel.js` and match the shipped proportions exactly (body
+resting at y 0.23, head between y 0.9 and 1.8) so they sit in the seat like
+everyone else. Rounded capsules, glossy eyes and paws on the wheel keep them
+in the same cartoon style — Rusty has long floppy ears, a snout and a pale
+blaze; Raja has a shaggy mane built from overlapping cones. Picker portraits
+are rendered from the same figures, framed on the head, so no racer is ever a
+blank slot.
 
 ## 🗺️ The tracks
 
