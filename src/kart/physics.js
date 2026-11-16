@@ -68,15 +68,18 @@ export function updateKart(kart, dt, active) {
   const cc = g.cc || 1;
   let top = BASE_SPEED * kart.skill * (1 + 0.008 * kart.coins) * cc;
 
-  // Rubber banding keeps the pack together without being obvious.
-  if (!kart.isPlayer && active) {
-    const gapM =
-      ((g.bandP === undefined ? g.player.progress : g.bandP) - kart.progress) * t.seg;
-    top *=
-      1 -
-      0.12 * clamp(-gapM, 25, 120) / 120 -
-      0.09 * clamp(-gapM, 120, 280) / 280 +
-      0.12 * clamp(gapM, 8, 75) / 75;
+  // Rubber banding keeps the pack together without being obvious. It is
+  // measured against the whole field, not just the player, so a ten-kart race
+  // (and CPU-only gaps) behaves the same as a six-kart one. The player gets a
+  // milder version of it so a bad start does not end the race.
+  if (active && !kart.finished) {
+    const band = g.fieldBand || 0;      // mean progress this frame
+    const spread = g.fieldSpread || 1;  // leader-to-last distance (m)
+    const gapM = (band - kart.progress) * t.seg;
+    const norm = clamp(gapM / Math.max(60, spread * 0.5), -1.4, 1.4);
+    const strength = kart.isPlayer ? 0.055 : 0.13;
+    // Behind: nudge up (never more than +13%). Ahead: ease off (max -12%).
+    top *= 1 + norm * strength;
   }
 
   if (kart.finished) top *= 0.7;

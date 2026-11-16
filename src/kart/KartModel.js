@@ -22,6 +22,8 @@ export const ROSTER = [
   { id: 'panda', name: 'Misty', kind: 'the Cat', paint: 0x9a4cf0, accent: 0xffffff, css: '#a05cff' },
   { id: 'koala', name: 'Rocky', kind: 'the Raccoon', paint: 0xffd21e, accent: 0x9a3a10, css: '#ffd21e' },
   { id: 'penguin', name: 'Zoomy', kind: 'the Penguin', paint: 0x2f8cff, accent: 0xffd21e, css: '#3b82ff' },
+  { id: 'dog', name: 'Rusty', kind: 'the Hound', paint: 0xa4642f, accent: 0xffe0b0, css: '#c07a3f' },
+  { id: 'lion', name: 'Raja', kind: 'the Lion', paint: 0xf0a01e, accent: 0x7a3f10, css: '#ffb020' },
 ];
 
 export const ROSTER_IDS = ROSTER.map((r) => r.id);
@@ -59,6 +61,8 @@ export const CHAR_TUNING = {
   panda: { grip: 1.12, accel: 0.96, label: 'Grippy' },
   koala: { grip: 0.9, accel: 1.14, label: 'Fast' },
   penguin: { grip: 1.06, accel: 1.0, label: 'Steady' },
+  dog: { grip: 1.08, accel: 1.02, label: 'Bold' },
+  lion: { grip: 0.92, accel: 1.12, label: 'Roaring' },
 };
 
 const PAINT_RE = /Paint|Body|Shell|Chassis|Sculpt/i;
@@ -82,6 +86,41 @@ function fallbackKartMesh(paint, accent) {
   return g;
 }
 
+/** A blocky driver figure for racers that have no `driver_<id>.glb` yet.
+ *  Keeps every kart on the grid looked-inhabited, and reuses the same
+ *  `Wob_*` naming so the ear/tail wobble code drives it unchanged. */
+function fallbackDriver(paint, accent) {
+  const g = new THREE.Group();
+  const skin = new THREE.MeshLambertMaterial({ color: paint });
+  const trim = new THREE.MeshLambertMaterial({ color: accent });
+
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.4, 0.4), skin);
+  head.name = 'Head';
+  head.position.set(0, 0.52, 0.06);
+  head.castShadow = true;
+
+  const muzzle = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.16, 0.18), trim);
+  muzzle.position.set(0, 0.44, 0.26);
+
+  const eyes = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.07, 0.04), new THREE.MeshBasicMaterial({ color: 0x101014 }));
+  eyes.name = 'Eyes';
+  eyes.position.set(0, 0.58, 0.26);
+
+  const earL = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.2, 0.08), skin);
+  earL.name = 'Wob_EarL';
+  earL.position.set(-0.14, 0.74, 0.05);
+  const earR = earL.clone();
+  earR.name = 'Wob_EarR';
+  earR.position.x = 0.14;
+
+  const torso = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.34, 0.28), trim);
+  torso.position.set(0, 0.24, 0);
+  torso.castShadow = true;
+
+  g.add(head, muzzle, eyes, earL, earR, torso);
+  return g;
+}
+
 /**
  * Assemble a drivable kart. Returns the root group, the tilt sub-group (for
  * lean/pitch), the body model, and a `ud` bag of the parts the visuals touch.
@@ -92,6 +131,8 @@ export function buildKart(A, charId, opts = {}) {
   // Prefer the dedicated livery, fall back to the recoloured base kart, and
   // finally to a primitive box kart so a missing model can never make a
   // racer invisible on the grid.
+  const paintColor = new THREE.Color(char.paint);
+  const accentColor = new THREE.Color(char.accent);
   const liveryKey = kartBodyKey(char.id);
   const useLivery = !!A[liveryKey];
   const src = useLivery ? A[liveryKey] : A.kart;
@@ -103,9 +144,6 @@ export function buildKart(A, charId, opts = {}) {
   const tilt = new THREE.Group();
   root.add(tilt);
   tilt.add(body);
-
-  const paintColor = new THREE.Color(char.paint);
-  const accentColor = new THREE.Color(char.accent);
 
   // A dedicated livery is already baked with the character's colours, so only
   // the shared `kart.glb` gets repainted.
@@ -157,6 +195,10 @@ export function buildKart(A, charId, opts = {}) {
 
   if (driverSrc) {
     driver = driverSrc.clone(true);
+  } else {
+    driver = fallbackDriver(char.paint, char.accent);
+  }
+  {
     driver.traverse((o) => {
       if (o.isMesh) {
         o.castShadow = true;

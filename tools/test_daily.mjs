@@ -70,7 +70,7 @@ const greeted = await page.evaluate(
 console.log('greetToast:', greeted);
 
 const ok =
-  out.configSane && out.dailyFlag && out.karts === 6 && out.state === 'done' &&
+  out.configSane && out.dailyFlag && out.karts === 10 && out.state === 'done' &&
   out.resultsOn && out.storedIsTime && out.dailyCleared && out.refused &&
   /DAILY/.test(greeted) && errs.length === 0;
 console.log(ok ? 'DAILY OK' : 'DAILY FAILED');

@@ -6,7 +6,7 @@
 // banners and the big countdown.
 
 import * as THREE from 'three';
-import { clamp, formatTime, isTouch } from '../core/utils.js';
+import { clamp, formatTime, isTouch, ordinal } from '../core/utils.js';
 import { ITEM_NAMES } from '../items/Items.js';
 import { EMOTES } from '../net/Net.js';
 
@@ -56,25 +56,13 @@ export class HUD {
       });
     }
 
-    // Position board rows, one per racer.
-    for (const r of racers) {
-      const row = document.createElement('div');
-      row.className = 'row' + (r.id === racers[0].id ? ' me' : '');
-      row.innerHTML = `<span class="n"></span><img src="${icons[r.id] || ''}" alt=""><span class="nm">${r.name}</span><span class="bl"></span>`;
-      row.style.setProperty('--c', r.css);
-      this.rowsEl.appendChild(row);
-      this.rows[r.id] = row;
-    }
-
-    // Floating name tags.
-    this.tagEls = racers.map((r) => {
-      const el = document.createElement('div');
-      el.className = 'tag';
-      el.style.setProperty('--c', r.css);
-      el.innerHTML = `<b></b><span>${r.name}</span><i></i>`;
-      $('tags').appendChild(el);
-      return { el, id: r.id, n: el.children[0], e: el.children[2], on: false, emo: '', rank: 0 };
-    });
+    // Position board rows and name tags, one per GRID SLOT - not per racer.
+    // A ten-kart field reuses the eight animal models, so keying by `def.id`
+    // would collapse two karts into one row (and hide them from the board).
+    this.rows = {};
+    this.tagEls = [];
+    this.boardSlots = 0;
+    this.buildBoardRows(10);
 
     this.tpips = Array.from(document.querySelectorAll('#turbo i b'));
     this.mm = $('minimap');
@@ -141,7 +129,7 @@ export class HUD {
   /** Balloon pips on every position-board row (battle only). */
   setBoardBalloons(ranked) {
     for (const k of ranked) {
-      const row = this.rows[k.def.id];
+      const row = this.rows[k.slot];
       if (!row) continue;
       const bl = row.querySelector('.bl');
       if (!bl) continue;
@@ -341,35 +329,104 @@ export class HUD {
     this.warnEl.classList.toggle('on', on);
   }
 
+  /** Build (or rebuild) the position-board rows and floating name tags.
+   *  One per GRID SLOT. A ten-kart field reuses the eight animal models, so
+   *  keying by racer id would collapse two karts into one row. */
+  buildBoardRows(n = 10) {
+    this.boardSlots = n;
+    this.rowsEl.innerHTML = '';
+    $('tags').innerHTML = '';
+    this.rows = {};
+    this.tagEls = [];
+    for (let i = 0; i < n; i++) {
+      const row = document.createElement('div');
+      row.className = 'row';
+      row.innerHTML = '<span class="n"></span><img src="" alt=""><span class="nm"></span><span class="bl"></span>';
+      this.rowsEl.appendChild(row);
+      this.rows[i] = row;
+
+      const el = document.createElement('div');
+      el.className = 'tag';
+      el.innerHTML = '<b></b><span></span><i></i>';
+      $('tags').appendChild(el);
+      this.tagEls.push({ el, slot: i, n: el.children[0], e: el.children[2], on: false, emo: '', rank: 0 });
+    }
+    this._board = '';
+  }
+
+  /** Adopt the real field: one row and tag per kart, labelled with its racer. */
+  buildBoard(ranked) {
+    if (!ranked || !ranked.length) return;
+    if (this.boardSlots !== ranked.length) this.buildBoardRows(ranked.length);
+
+    // A ten-kart field can reuse a model, so a plain name would show up twice.
+    // Number the repeats (BLAZE 2, BLAZE 3) the way real scoreboards do.
+    const seq = {};
+    const labels = ranked.map((k) => {
+      const base = this.names[k.def.id] || k.def.name;
+      seq[base] = (seq[base] || 0) + 1;
+      return seq[base] > 1 ? `${base} ${seq[base]}` : base;
+    });
+
+    ranked.forEach((k, i) => {
+      const row = this.rows[i];
+      const tag = this.tagEls[i];
+      const name = labels[i];
+      if (row) {
+        row.className = 'row' + (k.isPlayer ? ' me' : '');
+        row.dataset.racer = k.def.id;
+        row.dataset.label = name;
+        row.style.setProperty('--c', k.def.css);
+        const img = row.querySelector('img');
+        if (img) img.src = this.icons[k.def.id] || '';
+        row.querySelector('.nm').textContent = name;
+      }
+      if (tag) {
+        tag.el.style.setProperty('--c', k.def.css);
+        tag.el.children[1].textContent = name;
+        tag.el.classList.toggle('hu', this.names[k.def.id] !== undefined);
+      }
+    });
+    this._board = '';
+    this.board(ranked);
+  }
+
   setNames(names) {
     this.names = names;
-    for (const r of this.racers) {
-      const n = names[r.id];
-      const nm = this.rows[r.id].querySelector('.nm');
-      if (nm) nm.textContent = n || r.name;
-      this.rows[r.id].classList.toggle('hu', n !== undefined);
-      const tag = this.tagEls.find((t) => t.id === r.id);
-      if (tag) {
-        tag.el.children[1].textContent = n || r.name;
-        tag.el.classList.toggle('hu', n !== undefined);
-      }
+    // Rename every slot that currently shows one of these racers, keeping the
+    // duplicate-numbering that buildBoard() applied.
+    for (let i = 0; i < this.boardSlots; i++) {
+      const row = this.rows[i];
+      const tag = this.tagEls[i];
+      if (!row || !tag) continue;
+      const id = row.dataset.racer;
+      if (!id) continue;
+      const r = this.racers.find((x) => x.id === id);
+      const base = names[id] || (r ? r.name : '');
+      const label = row.dataset.label || base;
+      const n = label.startsWith(base) ? label : base;
+      row.querySelector('.nm').textContent = n;
+      row.classList.toggle('hu', names[id] !== undefined);
+      tag.el.children[1].textContent = n;
+      tag.el.classList.toggle('hu', names[id] !== undefined);
     }
   }
 
-  setPlayer(id) {
-    for (const k in this.rows) this.rows[k].classList.toggle('me', k === id);
+  setPlayer() {
+    // Player rows are marked by buildBoard()/board() from `isPlayer`.
   }
 
   // ------------------------------------------------------------------- board
   board(ranked) {
-    const key = ranked.map((k) => k.def.id).join(',');
+    const key = ranked.map((k) => k.slot).join(',');
     if (key === this._board) return;
     this._board = key;
     ranked.forEach((k, i) => {
-      const row = this.rows[k.def.id];
+      const row = this.rows[k.slot];
       if (!row) return;
       // Spacing comes from --rowh so short screens can compact the board.
       row.style.transform = `translateY(calc(${i} * var(--rowh, 46px)))`;
+      row.classList.toggle('me', !!k.isPlayer);
       row.firstChild.textContent = i + 1;
     });
   }
@@ -380,7 +437,7 @@ export class HUD {
     const w = innerWidth;
     const h = innerHeight;
     for (const t of this.tagEls) {
-      const k = karts.find((x) => x.def.id === t.id);
+      const k = karts.find((x) => x.slot === t.slot);
       let visible = false;
       if (enabled && k && !k.isPlayer) {
         v.set(k.x, k.y + 2.25 * k.size, k.z);
@@ -511,7 +568,7 @@ export class HUD {
     let head = headOverride;
 
     if (battle === 'battle') {
-      head = place === 1 ? 'VICTORY!' : `POPPED! ${['', '1ST', '2ND', '3RD', '4TH', '5TH', '6TH'][place] || ''}`;
+      head = place === 1 ? 'VICTORY!' : `POPPED! ${ordinal(place)}`;
     } else if (battle === 'elim') {
       head = place === 1 ? 'LAST KART STANDING!' : player.eliminated ? 'ELIMINATED!' : '';
     }
@@ -523,13 +580,16 @@ export class HUD {
           (a, b) => cup.pts[cup.key(b)] - cup.pts[cup.key(a)] || a.rank - b.rank,
         );
         place = sorted.indexOf(player) + 1;
-        head = ['GRAND PRIX CHAMPION!', '2ND OVERALL!', '3RD OVERALL!', '4TH OVERALL', '5TH OVERALL', '6TH OVERALL'][place - 1];
+        head = place === 1 ? 'GRAND PRIX CHAMPION!' : `${ordinal(place)} OVERALL`;
       } else {
-        head = `RACE ${cup.race} OF ${cup.total}: ${['1ST', '2ND', '3RD', '4TH', '5TH', '6TH'][place - 1]}`;
+        head = `RACE ${cup.race} OF ${cup.total}: ${ordinal(place)}`;
       }
     }
 
-    let html = `<div class="rhead">${place <= 3 && !headOverride ? `<img class="cup c${place}" src="${this.icons.trophy || ''}" alt="">` : ''}<h2>${head || ['YOU WIN!', '2ND PLACE!', '3RD PLACE!', '4TH PLACE', '5TH PLACE', '6TH PLACE'][place - 1]}</h2></div>`;
+    // The place label is generated, so the grid can grow past six without
+    // the last few finishers losing their heading.
+    const placeLabel = place === 1 ? 'YOU WIN!' : `${ordinal(place)} PLACE`;
+    let html = `<div class="rhead">${place <= 3 && !headOverride ? `<img class="cup c${place}" src="${this.icons.trophy || ''}" alt="">` : ''}<h2>${head || placeLabel}</h2></div>`;
 
     ranked.forEach((k, i) => {
       const stat = battle === 'battle'

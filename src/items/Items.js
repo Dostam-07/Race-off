@@ -228,16 +228,22 @@ export class Items {
   }
 
   // ------------------------------------------------------------------ items
-  /** Rank-weighted item roll. */
-  pick(kart) {
-    const table = {
-      1: { durian: 4, shield: 3, chili: 2.5, rocket: 0.5 },
-      2: { chili: 3, rocket: 3, durian: 2, shield: 2 },
-      3: { chili: 3, rocket: 3, durian: 2, shield: 2 },
-      4: { chili: 3, rocket: 3.5, shield: 1.5, star: 1, durian: 1 },
-      5: { star: 2.6, bolt: 2, rocket: 2.6, chili: 2.4 },
-      6: { star: 3.2, bolt: 2.6, rocket: 2.4, chili: 1.8 },
-    }[kart.rank] || { chili: 1 };
+  /** Rank-weighted item roll.
+   *  The table is expressed as fractions of the field, not absolute ranks, so
+   *  a six-kart race and a ten-kart race both read "front / middle / back".
+   *  `p` is 0 at the leader and 1 at last place. */
+  pick(kart, fieldSize = 6) {
+    const n = Math.max(2, fieldSize || 6);
+    const p = clamp((kart.rank - 1) / (n - 1), 0, 1);
+
+    // Front runners get defence and disruption; the back of the field gets
+    // the comeback items. Interpolated so every field size stays balanced.
+    let table;
+    if (p <= 0.2) table = { durian: 4, shield: 3, chili: 2.5, rocket: 0.5 };
+    else if (p <= 0.45) table = { chili: 3, rocket: 3, durian: 2, shield: 2 };
+    else if (p <= 0.7) table = { chili: 3, rocket: 3.5, shield: 1.5, star: 1, durian: 1 };
+    else if (p <= 0.88) table = { star: 2.6, bolt: 2, rocket: 2.6, chili: 2.4 };
+    else table = { star: 3.2, bolt: 2.6, rocket: 2.4, chili: 1.8 };
 
     if (!kart.isPlayer && table.bolt) table.bolt *= 0.4;
     // Daily challenge: the roulette is seeded, so everyone gets the same rolls.
@@ -529,7 +535,7 @@ export class Items {
       if (k.roll > 0) {
         k.roll -= dt;
         if (k.roll <= 0) {
-          k.item = this.pick(k);
+          k.item = this.pick(k, g.karts.length);
           k.itemHold = 1 + (this.game.daily ? this.game.rnd() : Math.random()) * 4;
           if (k.isPlayer) {
             g.hud.setItem(k.item);

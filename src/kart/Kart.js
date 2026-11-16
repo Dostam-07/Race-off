@@ -377,7 +377,7 @@ export class Kart {
     const corner = t.curv[wrapIdx(Math.round(this.idx + 26), N)];
     const halfWidth = t.wallAt(wrapIdx(Math.round(targetIdx), N));
 
-    // Steer around a slower kart directly ahead.
+    // Steer around a slower kart directly ahead (kept from the original).
     let avoid = 0;
     for (const other of g.karts) {
       if (other === this) continue;
@@ -385,6 +385,22 @@ export class Kart {
       if (d < -N / 2) d += N;
       if (d > 0 && d < 18 && Math.abs(other.lat - this.lat) < 1.9 && other.speed < this.speed + 1.5) {
         avoid = (this.lat >= other.lat ? 1 : -1) * 2.8;
+        break;
+      }
+    }
+
+    // And dodge durian traps lying on the racing line ahead - including my
+    // own, which is the classic way an AI driver ruins its own race.
+    const traps = g.items?.traps;
+    if (traps && traps.length) {
+      for (const tr of traps) {
+        const d = (tr.x - this.x) * Math.sin(this.heading) + (tr.z - this.z) * Math.cos(this.heading);
+        if (d < 0 || d > 22) continue; // only what is genuinely in front
+        const lateral = (tr.x - this.x) * Math.cos(this.heading) - (tr.z - this.z) * Math.sin(this.heading);
+        if (Math.abs(lateral - this.lat) > 3.4) continue; // not in my path
+        // Swing to whichever side has more room.
+        const room = Math.min(6.2, halfWidth - 2.2);
+        avoid += this.lat > 0 ? -room - this.lat : room - this.lat;
         break;
       }
     }
@@ -413,7 +429,7 @@ export class Kart {
       this.aiDrift = 0;
     }
 
-    // Items.
+    // Items. Fire when it actually helps instead of on a blind timer.
     inp.item = false;
     if (this.item) {
       this.itemHold -= dt;
@@ -421,15 +437,24 @@ export class Kart {
       if (this.item === 'rocket') {
         const ahead = g.ranked[this.rank - 2];
         const gapM = ahead ? (ahead.progress - this.progress) * t.seg : 1e9;
-        fire = (this.itemHold < 2 && gapM < 90) || this.itemHold < -7;
+        // Fire once the target is close, is not already invulnerable, and we
+        // are not in a corner where the rocket will eat a wall.
+        const clear = Math.abs(corner) < 0.02;
+        fire = ((this.itemHold < 2 && gapM < 90 && gapM > 4 && clear) || this.itemHold < -7);
       } else if (this.item === 'durian') {
         const behind = g.ranked[this.rank];
         const gapM = behind ? (this.progress - behind.progress) * t.seg : 1e9;
-        fire = (this.itemHold < 2 && gapM < 14) || this.itemHold < -7;
+        // Drop it where it will actually be driven into: in front of a chaser
+        // on a straight, never into our own path.
+        fire = (this.itemHold < 2 && gapM > 3 && gapM < 14) || this.itemHold < -7;
       } else if (this.item === 'chili' || this.item === 'star') {
-        fire = this.itemHold <= 0 && Math.abs(corner) < 0.01;
+        // Boost only where there is road: straights and gentle bends.
+        fire = this.itemHold <= 0 && Math.abs(corner) < 0.012;
       } else if (this.item === 'shield') {
-        fire = this.shield <= 0;
+        // Prefer to hold a shield until something is genuinely chasing.
+        const chase = g.ranked[this.rank];
+        const chasing = chase && (this.progress - chase.progress) * t.seg < 40;
+        fire = this.shield <= 0 && (chasing || this.itemHold < -1);
       }
       inp.item = fire;
     }

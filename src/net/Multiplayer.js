@@ -12,6 +12,7 @@ import { Net, makeCode, cleanCode, cleanName, ROOM_PREFIX, EMOTES } from './Net.
 import { dirAvailable, dirQuick, dirList, dirPublish } from './directory.js';
 import { track as trackEvent } from '../core/analytics.js';
 import { ROSTER } from '../kart/KartModel.js';
+import { GRID } from '../core/raceFlow.js';
 import { TRACK_ORDER, TRACKS } from '../tracks/definitions.js';
 
 export const STORE = {
@@ -384,10 +385,10 @@ const mpMethods = {
         row.append(img, label);
         host.appendChild(row);
       }
-      if (players.length && players.length < 6) {
+      if (players.length && players.length < GRID) {
         const cpu = document.createElement('div');
         cpu.className = 'lp cpu';
-        cpu.textContent = '+ ' + (6 - players.length) + ' CPU';
+        cpu.textContent = '+ ' + (GRID - players.length) + ' CPU';
         host.appendChild(cpu);
       }
     }
@@ -424,7 +425,7 @@ const mpMethods = {
     const n = mp.players.length;
     if (this.bumpT > performance.now()) return this.bumpMsg || '';
     if (s === 'unsupported') return 'THIS BROWSER CANNOT JOIN ROOMS';
-    if (s === 'full') return 'THIS ROOM IS FULL (6 RACERS)';
+    if (s === 'full') return `THIS ROOM IS FULL (${GRID} RACERS)`;
     if (s === 'offline') return 'CANNOT REACH THE MATCHMAKER. RETRYING\u2026';
     if (mp.isHost) {
       if (s !== 'open') return 'OPENING THE ROOM\u2026';
@@ -480,8 +481,8 @@ const mpMethods = {
 
     this.spectating = false;
     this.specKart = null;
-    // A full six-kart field; humans drive their slots, the CPU fills the rest.
-    this.buildField(this.pickChar(), 5);
+    // A full ten-kart field; humans drive their slots, the CPU fills the rest.
+    this.buildField(this.pickChar(), GRID - 1);
 
     info.grid.forEach((racer, slot) => {
       const kart = this.kartOf(racer);
@@ -523,7 +524,7 @@ const mpMethods = {
     this.mirror = !!info.mirror;
 
     if (this.rid(this.player) !== mp.me.racer) this.menus.select(mp.me.racer, true);
-    this.buildField(this.pickChar(), 5);
+    this.buildField(this.pickChar(), GRID - 1);
     info.grid.forEach((racer, slot) => {
       const kart = this.kartOf(racer);
       if (!kart) return;

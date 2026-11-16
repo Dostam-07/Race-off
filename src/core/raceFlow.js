@@ -14,8 +14,10 @@ import { dailyConfig, dailyResult, dailySave, dailySaveStarted, dailyRng, dailyF
 import { STORE, sset } from '../net/Multiplayer.js';
 import { track as trackEvent } from './analytics.js';
 
-export const GRID = 6;
-export const POINTS = [15, 12, 10, 8, 6, 4];
+// A full field is ten karts - enough for a small team plus CPU fillers.
+export const GRID = 10;
+export const GRID_MIN = 6;
+export const POINTS = [20, 16, 13, 11, 9, 7, 5, 4, 3, 2];
 
 /** Attach the race-flow methods to a Game instance. */
 export function installRaceFlow(GameClass) {
@@ -43,12 +45,15 @@ const raceFlow = {
     this.karts.push(player);
     this.player = player;
 
-    // AI fills the remaining grid slots with the unused racers.
+    // AI fills the remaining grid slots, cycling through the unused racers
+    // (with 10 slots and 8 racers the pool wraps for the tail of the field).
     const pool = ROSTER.filter((r) => r.id !== playerChar);
     for (let i = 0; i < aiCount; i++) {
       const char = pool[i % pool.length];
       const k = new Kart(this, char.id, i + 1, false);
-      k.skill = 0.82 + this.rnd() * 0.3 - i * 0.02;
+      // The field is longer now, so the difficulty ramp is gentler: the front
+      // of the grid is quick, the tail is beatable, and nobody is a runaway.
+      k.skill = 0.86 + this.rnd() * 0.22 - i * 0.012;
       this.karts.push(k);
     }
 

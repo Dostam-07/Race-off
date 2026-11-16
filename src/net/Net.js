@@ -59,13 +59,25 @@ export const cleanName = (s) =>
     .map(titleCase)
     .join('');
 
-const RACER_MAX = 6;
+const RACER_MAX = 10;
 
 /** The emote wheel: six quick reactions, sent as tiny multiplayer events. */
 export const EMOTES = ['\u{1F44D}', '\u2764\uFE0F', '\u{1F602}', '\u{1F62E}', '\u{1F621}', '\u{1F389}'];
 
-/** A racer index must be an integer in [0, 6). */
+/** A racer index must be an integer in [0, 10). */
 const isRacer = (n) => Number.isInteger(n) && n >= 0 && n < RACER_MAX;
+
+/** A start/spectate grid must be exactly one slot per racer, each used once,
+ *  in any order (the host assigns slots by join order, not by index). */
+function validGrid(grid) {
+  if (!Array.isArray(grid) || grid.length !== RACER_MAX) return false;
+  const seen = new Set();
+  for (const r of grid) {
+    if (!isRacer(r) || seen.has(r)) return false;
+    seen.add(r);
+  }
+  return true;
+}
 
 /** An emote wheel index. */
 const isEmote = (n) => Number.isInteger(n) && n >= 0 && n < EMOTES.length;
@@ -495,14 +507,7 @@ export class Net {
     } else if (msg.t === 'start') {
       if (this.phase !== 'lobby' || this.waiting) return;
       const grid = msg.grid;
-      if (
-        !Array.isArray(grid) ||
-        grid.length !== RACER_MAX ||
-        grid.slice().sort().join() !== '0,1,2,3,4,5' ||
-        !Array.isArray(msg.humans)
-      ) {
-        return;
-      }
+      if (!validGrid(grid) || !Array.isArray(msg.humans)) return;
       const names = {};
       for (const r of msg.humans) if (isRacer(r)) names[r] = cleanName(msg.names && msg.names[r]);
       this.phase = 'race';
@@ -522,13 +527,7 @@ export class Net {
     } else if (msg.t === 'spec') {
       if (this.phase !== 'lobby' || !this.waiting || !Array.isArray(msg.grid)) return;
       const grid = msg.grid;
-      if (
-        grid.length !== RACER_MAX ||
-        grid.slice().sort().join() !== '0,1,2,3,4,5' ||
-        !Array.isArray(msg.humans)
-      ) {
-        return;
-      }
+      if (!validGrid(grid) || !Array.isArray(msg.humans)) return;
       const names = {};
       for (const r of msg.humans) if (isRacer(r)) names[r] = cleanName(msg.names && msg.names[r]);
       this.h.spec &&
@@ -629,7 +628,7 @@ export class Net {
       }
     } else if (msg.t === 'hello') {
       if (guest.ok) return;
-      if (this.guests.size >= 5) {
+      if (this.guests.size >= RACER_MAX - 1) {
         post(guest.conn, { t: 'full' });
         setTimeout(() => {
           try {
@@ -710,7 +709,7 @@ export class Net {
       const j = (Math.random() * (i + 1)) | 0;
       [humans[i], humans[j]] = [humans[j], humans[i]];
     }
-    const grid = [0, 1, 2, 3, 4, 5].filter((r) => !humans.includes(r)).concat(humans);
+    const grid = [...Array(RACER_MAX).keys()].filter((r) => !humans.includes(r)).concat(humans);
 
     // Remember the race setup so late joiners can spectate it.
     this.lastStart = { grid, humans, names, cc: opts.cc, mirror: !!opts.mirror };

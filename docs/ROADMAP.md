@@ -14,6 +14,16 @@ reason to come back, and smoother community features.
 
 ## Phase 6 — Game modes & depth
 
+0. **Ten-kart fields, eight racers, and a fairer pack** ✅ *(shipped:
+   grid 6 → 10 in solo, GP, daily and online (host now seats 10, grid
+   validation and scoreboard are slot-keyed so duplicate models get their own
+   row, "Luna 2" numbering); two new racers — Rusty the Hound and Raja the
+   Lion — with a procedural driver fallback for models with no GLB; item odds
+   rewritten from fixed ranks 1-6 to field-relative fractions so ranks 7-10
+   still roll comeback items; rubber banding switched from player-gap to
+   field-mean with a mild player assist; AI now dodges durians (including its
+   own) and spends items tactically.)*
+
 1. **Battle mode** ✅ *(shipped: Balloon Brawl arena — pick BATTLE on the
    track picker; 3 balloons each, item hits pop them, last kart standing /
    most balloons at time-up wins, battle results variant, board balloon

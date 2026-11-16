@@ -130,17 +130,26 @@ const loopMethods = {
     }
 
     // ---- karts
-    // While hosting, the rubber-band baseline is the average human progress.
-    if (this.mp && this.mp.isHost && !this.mp.dead) {
+    // Rubber-band baseline: the mean progress of the whole field, plus how
+    // spread out it is. Measured over every kart rather than a fixed player
+    // gap so the assist scales with the grid (6 or 10) and with the track.
+    {
       let sum = 0;
       let n = 0;
+      let lo = Infinity;
+      let hi = -Infinity;
       for (const k of this.karts) {
-        if (k.human && !k.finished) {
-          sum += k.progress;
-          n++;
-        }
+        if (k.finished) continue;
+        sum += k.progress;
+        n++;
+        if (k.progress < lo) lo = k.progress;
+        if (k.progress > hi) hi = k.progress;
       }
-      this.bandP = n ? sum / n : undefined;
+      if (n) {
+        this.fieldBand = sum / n;
+        this.fieldSpread = hi - lo;
+        this.bandP = this.fieldBand;
+      }
     }
     // Remote karts never run local physics: their owner simulates them and we
     // interpolate toward the snapshots as they arrive.

@@ -75,20 +75,20 @@ const specInfo = await spec.evaluate(() => {
 });
 console.log('spectator:', JSON.stringify(specInfo));
 
-// The spectator receives snapshots for all six karts (including their own
+// The spectator receives snapshots for all ten karts (including their own
 // slot, which the host drives as CPU) and they actually move.
 await spec.waitForTimeout(1500);
 const p1 = await spec.evaluate(() => window.game.karts.map((k) => k.x.toFixed(1)));
 await spec.waitForTimeout(1500);
 const p2 = await spec.evaluate(() => window.game.karts.map((k) => k.x.toFixed(1)));
 const moving = p1.filter((v, i) => v !== p2[i]).length;
-console.log('karts moved:', moving, 'of 6');
+console.log('karts moved:', moving, 'of 10');
 
 // The spectator can cycle the follow camera with the arrow keys.
-const before = await spec.evaluate(() => window.game.specKart?.def.id);
+const before = await spec.evaluate(() => window.game.specKart?.slot);
 await spec.keyboard.press('ArrowRight');
 await spec.waitForTimeout(300);
-const after = await spec.evaluate(() => window.game.specKart?.def.id);
+const after = await spec.evaluate(() => window.game.specKart?.slot);
 console.log('camera cycle:', before, '->', after);
 
 // The host finishes the race -> the spectator returns to the lobby and the
@@ -130,8 +130,8 @@ console.log('ex-spectator races next:', racedAgain);
 
 const ok =
   spectating &&
-  specInfo.remotes === 6 && specInfo.karts === 6 &&
-  moving >= 4 &&
+  specInfo.remotes === 8 && specInfo.karts === 10 &&
+  moving >= 6 &&
   before !== after &&
   afterOver.spectating === false && afterOver.lobbyOn === true &&
   racedAgain;
