@@ -60,7 +60,7 @@ export class HUD {
     for (const r of racers) {
       const row = document.createElement('div');
       row.className = 'row' + (r.id === racers[0].id ? ' me' : '');
-      row.innerHTML = `<span class="n"></span><img src="${icons[r.id] || ''}" alt=""><span class="nm">${r.name}</span>`;
+      row.innerHTML = `<span class="n"></span><img src="${icons[r.id] || ''}" alt=""><span class="nm">${r.name}</span><span class="bl"></span>`;
       row.style.setProperty('--c', r.css);
       this.rowsEl.appendChild(row);
       this.rows[r.id] = row;
@@ -103,6 +103,51 @@ export class HUD {
   // ------------------------------------------------------------------ basics
   setLap(lap, total = 3) {
     $('lapn').textContent = Math.min(Math.max(lap, 1), total);
+  }
+
+  // ------------------------------------------------------------------ battle
+  /** Swap the lap readout for balloon pips while a battle is on. */
+  setBattleMode(on) {
+    $('lap').classList.toggle('battle', !!on);
+    if (on) this.setBattle(3, 120);
+  }
+
+  /** Balloon pips for the player (the lap slot) - 3 = full health. */
+  setBattle(balloons, timeLeft) {
+    const el = $('lapn');
+    if (!el) return;
+    const pips = '\u{1F388}'.repeat(Math.max(0, balloons)) || '\u{1F494}';
+    if (pips !== this._pips) {
+      this._pips = pips;
+      el.textContent = pips;
+    }
+    if (timeLeft != null) this.setBattleTime(timeLeft);
+  }
+
+  /** Battle countdown in the timer slot; flashes red under 10s. */
+  setBattleTime(sec) {
+    const el = $('timer');
+    if (!el) return;
+    const s = Math.ceil(sec) >= 60
+      ? `${Math.floor(Math.ceil(sec) / 60)}:${String(Math.ceil(sec) % 60).padStart(2, '0')}`
+      : String(Math.max(0, Math.ceil(sec)));
+    if (s !== this._btime) {
+      this._btime = s;
+      el.textContent = s;
+      el.classList.toggle('low', Math.ceil(sec) <= 10);
+    }
+  }
+
+  /** Balloon pips on every position-board row (battle only). */
+  setBoardBalloons(ranked) {
+    for (const k of ranked) {
+      const row = this.rows[k.def.id];
+      if (!row) continue;
+      const bl = row.querySelector('.bl');
+      if (!bl) continue;
+      const pips = k.eliminated ? '\u{1F494}' : '\u{1F388}'.repeat(k.balloons || 0);
+      if (bl.textContent !== pips) bl.textContent = pips;
+    }
   }
 
   setTime(sec) {
@@ -446,11 +491,15 @@ export class HUD {
   }
 
   // --------------------------------------------------------------- results
-  results(ranked, player, lapTimes = [], hint = '', quit = false, cup = null, headOverride = null) {
+  results(ranked, player, lapTimes = [], hint = '', quit = false, cup = null, headOverride = null, battle = null) {
     const el = $('results');
     const best = lapTimes.length ? Math.min(...lapTimes) : 0;
     let place = player.rank;
     let head = headOverride;
+
+    if (battle) {
+      head = place === 1 ? 'VICTORY!' : `POPPED! ${['', '1ST', '2ND', '3RD', '4TH', '5TH', '6TH'][place] || ''}`;
+    }
 
     if (cup) {
       el.classList.add('gp');
@@ -468,10 +517,16 @@ export class HUD {
     let html = `<div class="rhead">${place <= 3 && !headOverride ? `<img class="cup c${place}" src="${this.icons.trophy || ''}" alt="">` : ''}<h2>${head || ['YOU WIN!', '2ND PLACE!', '3RD PLACE!', '4TH PLACE', '5TH PLACE', '6TH PLACE'][place - 1]}</h2></div>`;
 
     ranked.forEach((k, i) => {
-      html += `<div class="rr${k === player ? ' me' : ''} m${i + 1}" style="--c:${k.def.css};animation-delay:${i * 0.09}s"><span class="n">${i + 1}</span><img src="${this.icons[k.def.id] || ''}" alt=""><span class="nm">${this.names[k.def.id] || k.def.name}</span><span class="t">${cup ? (cup.final ? '' : `<i>+${cup.gain[cup.key(k)]}</i>`) + `<b>${cup.pts[cup.key(k)]}</b> PTS` : k.finished ? formatTime(k.finishTime) : '\u2014'}</span></div>`;
+      const stat = battle
+        ? (k.eliminated ? '\u{1F494} OUT' : '\u{1F388}'.repeat(k.balloons || 0))
+        : cup ? (cup.final ? '' : `<i>+${cup.gain[cup.key(k)]}</i>`) + `<b>${cup.pts[cup.key(k)]}</b> PTS`
+        : k.finished ? formatTime(k.finishTime) : '\u2014';
+      html += `<div class="rr${k === player ? ' me' : ''} m${i + 1}" style="--c:${k.def.css};animation-delay:${i * 0.09}s"><span class="n">${i + 1}</span><img src="${this.icons[k.def.id] || ''}" alt=""><span class="nm">${this.names[k.def.id] || k.def.name}</span><span class="t">${stat}</span></div>`;
     });
 
-    html += `<div class="laps">${lapTimes.map((t, i) => `<span class="${t === best ? 'best' : ''}">LAP ${i + 1} <b>${formatTime(t)}</b></span>`).join('')}<span><img src="${this.icons.coin || ''}" alt=""><b>${player.coins}</b></span></div>`;
+    html += battle
+      ? `<div class="laps"><span>\u{1F388} BALLOON BRAWL</span><span><img src="${this.icons.coin || ''}" alt=""><b>${player.coins}</b></span></div>`
+      : `<div class="laps">${lapTimes.map((t, i) => `<span class="${t === best ? 'best' : ''}">LAP ${i + 1} <b>${formatTime(t)}</b></span>`).join('')}<span><img src="${this.icons.coin || ''}" alt=""><b>${player.coins}</b></span></div>`;
     html += `<div class="rshare"><div id="r-share" class="mbtn">SHARE RESULT</div></div>`;
     if (this.game?.timeTrial) html += `<div class="lboard" id="lboard"><div class="lb-h">TOP TIMES</div><div class="lb-body" id="lboard-body">\u2026</div></div>`;
     html += `<div class="again">${hint || (this.touch ? 'TAP TO RACE AGAIN' : 'PRESS ENTER TO RACE AGAIN')}</div>`;
@@ -482,7 +537,7 @@ export class HUD {
       place,
       trackId: this.game?.track?.def?.id,
       trackName: this.game?.track?.def?.name,
-      time: cup ? null : player.finishTime,
+      time: battle ? null : player.finishTime,
       points: cup ? cup.pts[cup.key(player)] : null,
       lapBest: best || null,
       charIcon: this.icons[player.def.id] || '',

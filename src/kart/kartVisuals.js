@@ -27,8 +27,8 @@ export function syncKart(kart, dt) {
   kart.driftVis = damp(kart.driftVis, drifting ? kart.driftDir * 0.46 : 0, drifting ? 7 : 9, dt || 1);
   kart.steerVis = damp(kart.steerVis, kart.input.steer, 10, dt || 1);
   kart.pitch = damp(kart.pitch, kart.pitchT || 0, 10, dt || 1);
-  kart.roll = damp(
-    kart.roll,
+  kart.rollVis = damp(
+    kart.rollVis,
     clamp(kart.turn * kart.speed * 0.0022, -0.12, 0.12) + kart.driftVis * 0.12,
     8,
     dt || 1,
@@ -87,7 +87,7 @@ export function syncKart(kart, dt) {
   kart.root.position.set(kart.x, kart.y, kart.z);
   kart.root.rotation.y = kart.heading + kart.driftVis + kart.spinAng;
   kart.tilt.rotation.x = kart.pitch;
-  kart.tilt.rotation.z = kart.roll;
+  kart.tilt.rotation.z = kart.rollVis;
   kart.tilt.rotation.y = kart.trickAng;
 
   // Landing squash & boost stretch.
@@ -177,7 +177,7 @@ export function syncKart(kart, dt) {
   if (ud && ud.head) {
     ud.head.rotation.y = damp(ud.head.rotation.y, kart.steerVis * 0.45 + kart.lookY, 8, dt || 1);
     const idle = g.state === 'title' ? 1 : 0;
-    ud.head.rotation.z = -kart.roll * 1.5 + idle * Math.sin(g.time * 1.15 + kart.slot) * 0.07;
+    ud.head.rotation.z = -kart.rollVis * 1.5 + idle * Math.sin(g.time * 1.15 + kart.slot) * 0.07;
     ud.head.rotation.x =
       idle * Math.sin(g.time * 0.8 + kart.slot * 1.7) * 0.05 +
       Math.sin(g.time * 9 + kart.slot * 2) * 0.025 * Math.min(1, kart.speed / 10) +

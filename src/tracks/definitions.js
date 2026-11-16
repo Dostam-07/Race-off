@@ -772,8 +772,46 @@ export const SNOW = {
   palette: ['#93a7bd', '#71879e', '#f2f7fc', '#dbe8f4', '#ffffff', '#bcd8ea', '#8fd4ec'],
 };
 
-export const TRACKS = { beach: BEACH, jungle: JUNGLE, volcano: VOLCANO, sky: SKY, desert: DESERT, snow: SNOW };
+/** Balloon Brawl - the battle arena. A wide, walled meadow loop with no gaps:
+ *  nobody falls off, everybody fights. No laps, no finish line - pop balloons. */
+const arenaCtrl = [
+  [0, 4, 96], [88, 4.5, 98], [158, 5.5, 76], [196, 6.5, 26],
+  [188, 7.5, -30], [138, 8.5, -64], [72, 9, -78],
+  [8, 8.5, -96], [-52, 8, -122], [-102, 7, -96],
+  [-128, 6.5, -44], [-116, 6, 14], [-142, 5, 58], [-96, 4, 88],
+  [-44, 3.5, 98],
+];
+const AL = loopLen(arenaCtrl);
+const A = (f) => f * AL;
+
+export const ARENA1 = {
+  id: 'arena1',
+  name: 'BALLOON BRAWL',
+  sub: 'BATTLE ARENA',
+  loading: ['Inflating balloons', 'Chalking the arena'],
+  battle: true,
+  ctrl: arenaCtrl,
+  // Item boxes ring the arena - battles live on the item economy.
+  boxes: [A(0.06), A(0.18), A(0.3), A(0.42), A(0.55), A(0.67), A(0.8), A(0.93)],
+  pads: [],
+  coins: [],
+  sections: [
+    [A(0.02), 'THE PIT', '#ff8a3a', '#c04a18'],
+    [A(0.36), 'MEADOW RUN', '#19b56b', '#0c7a52'],
+    [A(0.68), 'BACK STRAIGHT', '#5fe3ff', '#2a7ac9'],
+  ],
+  hints: { turbo: [A(0.4), A(0.55)], drift: [A(0.1), A(0.3)] },
+  bridge: () => false,
+  gorge: () => false,
+  lagoon: () => 0,
+  lava: () => 0,
+  gaps: [],
+  palette: ['#7fb069', '#5a8a4a', '#a8d08a', '#8fbf72', '#e8e2c8', '#6a9a55', '#3fa9c9'],
+};
+
+export const TRACKS = { beach: BEACH, jungle: JUNGLE, volcano: VOLCANO, sky: SKY, desert: DESERT, snow: SNOW, arena1: ARENA1 };
 export const TRACK_ORDER = ['beach', 'jungle', 'desert', 'volcano', 'snow', 'sky'];
+export const ARENA_ORDER = ['arena1'];
 
 export const volcanoMeta = { RIM_Y, RIM_TO, TURNS, TURN_R, BASE_Z, marks: volcanoMarks };
 

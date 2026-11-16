@@ -79,6 +79,7 @@ const mpMethods = {
   /** Host a fresh room. */
   startMultiplayer(isPublic = false) {
     if (this.mp || this.state !== 'title') return;
+    this.battle = null;
     trackEvent('room_create');
     const code = makeCode();
     for (const k of [STORE.mgp, STORE.gen, STORE.heir, STORE.had]) sset(k, null);

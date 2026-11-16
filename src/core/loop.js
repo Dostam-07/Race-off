@@ -124,6 +124,7 @@ const loopMethods = {
     // ---- state transitions
     if (this.state === 'intro') this.updateIntro(dt);
     if (this.state === 'finish' && this.st > 3.6) this.showResults();
+    if (this.state === 'race') this.updateBattle(dt);
 
     // ---- karts
     // While hosting, the rubber-band baseline is the average human progress.
@@ -163,7 +164,9 @@ const loopMethods = {
     if (this.items) this.items.update(dt, active);
 
     // ---- ranking
-    this.ranked = this.karts.slice().sort((a, b) => {
+    // Battles rank by balloons (survivors first, then the popped in reverse
+    // order) - race progress is meaningless without laps.
+    this.ranked = this.battle ? this.battleRanking() : this.karts.slice().sort((a, b) => {
       if (a.finished && b.finished) return a.finishTime - b.finishTime;
       if (a.finished) return -1;
       if (b.finished) return 1;
@@ -264,7 +267,13 @@ const loopMethods = {
       this.hud.setTurbo(player.turbo);
       this.hud.setPos(player.rank);
       this.hud.setSpeed(player.speed, player.boost > 0);
-      this.hud.setTime(player.finished ? player.finishTime : this.raceTime);
+      // Battles run a countdown in the timer slot and balloon pips on the board.
+      if (this.battle) {
+        this.hud.setBattleTime(Math.max(0, this.battle.time));
+        this.hud.setBoardBalloons(this.ranked);
+      } else {
+        this.hud.setTime(player.finished ? player.finishTime : this.raceTime);
+      }
       this.hud.board(this.ranked);
       this.hud.minimap(this.karts);
       this.hud.update(dt, this.audio);

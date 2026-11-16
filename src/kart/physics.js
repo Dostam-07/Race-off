@@ -33,7 +33,16 @@ export function updateKart(kart, dt, active) {
   const inp = kart.input;
 
   // --- AI / idle input
-  if (!kart.isPlayer && active) kart.ai(dt);
+  // Eliminated battle karts coast to a halt and ignore everything.
+  if (kart.eliminated) {
+    inp.steer = 0;
+    inp.accel = 0;
+    inp.brake = 1;
+    inp.drift = false;
+    inp.driftPressed = false;
+    inp.item = false;
+    inp.turbo = false;
+  } else if (!kart.isPlayer && active) kart.ai(dt);
   if (!active || (kart.finished && kart.isPlayer)) {
     if (kart.finished) {
       kart.ai(dt);

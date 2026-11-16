@@ -18,6 +18,7 @@ export class Menus {
     this.pick = 0;
     this.mode = 'gp';
     this.tt = false;
+this.battle = false;
     this.cc = 1;
     this.mirror = false;
     this.lastFocus = null;
@@ -106,6 +107,7 @@ export class Menus {
       g.audio.resume();
       document.body.classList.remove('solo');
       if (this.tt && this.mode !== 'gp') g.startTimeTrial(this.mode);
+      else if (this.battle) g.startBattle(this.mode);
       else g.startCupOrTrack(this.mode);
     });
 
@@ -137,12 +139,14 @@ export class Menus {
 
     this.buildKeymap();
 
-    // Time-trial toggle on the track picker.
+    // Time-trial / battle toggle on the track picker.
     document.querySelectorAll('#ttmode .mchip').forEach((el) => {
       el.addEventListener('click', () => {
         this.tt = el.dataset.tt === '1';
+        this.battle = el.dataset.battle === '1';
         document.querySelectorAll('#ttmode .mchip').forEach((e) =>
           e.classList.toggle('on', e === el));
+        this.filterLevels();
         this.updateGoLabel();
         g.audio.sfx('tick');
       });
@@ -346,8 +350,26 @@ export class Menus {
     if (!go) return;
     if (this.mode === 'gp') go.textContent = 'START GRAND PRIX';
     else {
-      const name = trackName || document.querySelector('#levels .lvl.on b')?.textContent || 'RACE';
-      go.textContent = this.tt ? `TIME TRIAL: ${name}` : `START ${name}`;
+      const name = trackName || document.querySelector('#cup .lvl.on b')?.textContent || 'RACE';
+      go.textContent = this.battle ? `BATTLE: ${name}` : this.tt ? `TIME TRIAL: ${name}` : `START ${name}`;
+    }
+  }
+
+  /** Show race tracks for race/time-trial, arenas for battle. */
+  filterLevels() {
+    const lvls = document.querySelectorAll('#cup .lvl');
+    lvls.forEach((e) => {
+      const arena = e.classList.contains('arena');
+      e.hidden = this.battle ? !arena : arena;
+    });
+    // If the current pick is hidden, select the first visible one.
+    const on = document.querySelector('#cup .lvl.on');
+    if (!on || on.hidden) {
+      const first = document.querySelector('#cup .lvl:not([hidden])');
+      if (first) {
+        lvls.forEach((e) => e.classList.toggle('on', e === first));
+        this.mode = first.dataset.l;
+      }
     }
   }
 
@@ -355,10 +377,11 @@ export class Menus {
     $('modes')?.classList.remove('on');
     $('cup')?.classList.add('on');
     document.querySelectorAll('#ttmode .mchip').forEach((e) =>
-      e.classList.toggle('on', (e.dataset.tt === '1') === !!this.tt));
-    const first = document.querySelector('#levels .lvl.on') || document.querySelector('#levels .lvl[data-l="gp"]');
+      e.classList.toggle('on', (e.dataset.tt === '1') === !!this.tt && (e.dataset.battle === '1') === !!this.battle));
+    this.filterLevels();
+    const first = document.querySelector('#cup .lvl.on') || document.querySelector('#cup .lvl:not([hidden])');
     if (first) {
-      document.querySelectorAll('#levels .lvl').forEach((e) => e.classList.toggle('on', e === first));
+      document.querySelectorAll('#cup .lvl').forEach((e) => e.classList.toggle('on', e === first));
       this.mode = first.dataset.l;
       const go = $('m-go');
       if (go) {

@@ -14,9 +14,12 @@ reason to come back, and smoother community features.
 
 ## Phase 6 — Game modes & depth
 
-1. **Battle mode** — arena maps (small, closed circuits) with item-only
-   combat: last kart standing and coin rush variants. Reuses the item
-   system; needs a new track type (`closed: true`) and a results variant.
+1. **Battle mode** ✅ *(shipped: Balloon Brawl arena — pick BATTLE on the
+   track picker; 3 balloons each, item hits pop them, last kart standing /
+   most balloons at time-up wins, battle results variant, board balloon
+   pips, rematch flow. Also fixed a port bug where the item roulette shared
+   the kart's visual-lean field, handing out free items on lean crossings.)*
+   Still open: coin-rush variant, more arenas.
 2. **Elimination race** — every 20 seconds the last-place kart explodes
    (bowser-fire style banner + boom SFX). Great with 6-player online lobbies.
 3. **Team race** — 3v3 with team colours on karts and a combined team score

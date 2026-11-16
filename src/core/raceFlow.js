@@ -70,6 +70,18 @@ const raceFlow = {
     this.hud.buildBoard?.(this.ranked);
     this.audio.setStar(false);
 
+    // Battle: three balloons apiece, no laps.
+    if (this.battle) {
+      for (const k of this.karts) {
+        k.balloons = 3;
+        k.eliminated = false;
+      }
+      this.hud.setBattleMode(true);
+      this.hud.setBattle(3, this.battle.time);
+    } else {
+      this.hud.setBattleMode?.(false);
+    }
+
     // Time trial: load the track's best-lap ghost and start recording a new one.
     this.ghostRec = [];
     this.ghostTick = 0;
@@ -96,6 +108,7 @@ const raceFlow = {
     this.daily = null;
     this.timeTrial = false;
     this.noItems = false;
+    this.battle = null;
     const id = trackId || this.currentTrackId || 'beach';
     this.currentTrackId = id;
     this.loadTrack(id);
@@ -110,10 +123,26 @@ const raceFlow = {
     this.daily = null;
     this.timeTrial = true;
     this.noItems = true; // must be set before loadTrack - Items builds there
+    this.battle = null;
     const id = trackId || this.currentTrackId || 'beach';
     this.currentTrackId = id;
     this.loadTrack(id);
     this.buildField(this.pickChar(), 0);
+    this.beginIntro();
+  },
+
+  /** Battle arena: no laps - pop balloons, last kart standing wins. */
+  startBattle(arenaId) {
+    this.audio.resume();
+    this.cup = null;
+    this.daily = null;
+    this.timeTrial = false;
+    this.noItems = false;
+    this.battle = { time: 120, over: false, order: [], playerOut: false };
+    const id = arenaId || 'arena1';
+    this.currentTrackId = id;
+    this.loadTrack(id);
+    this.buildField(this.pickChar());
     this.beginIntro();
   },
 
@@ -138,6 +167,7 @@ const raceFlow = {
     this.timeTrial = false;
     this.noItems = false;
     this.daily = { key: d.key };
+    this.battle = null;
     this.dailyKey = d.key;
     this.dailyCfg = d;
     this.cc = d.cc;
@@ -180,6 +210,7 @@ const raceFlow = {
     this.timeTrial = false;
     this.noItems = false;
     this.daily = null;
+    this.battle = null;
     this.audio.resume();
     this.loadTrack(id);
     this.buildField(this.pickChar());
@@ -209,6 +240,7 @@ const raceFlow = {
       mode: this.mp ? 'mp'
         : this.timeTrial ? 'tt'
         : this.daily ? 'daily'
+        : this.battle ? 'battle'
         : this.cup ? 'gp' : 'solo',
     });
   },
@@ -241,6 +273,7 @@ const raceFlow = {
   },
 
   onLap(kart) {
+    if (this.battle) return; // battles have no laps and no finish line
     if (kart.isPlayer && kart.lap > 1 && !kart.finished) {
       const lapTime = this.raceTime - this.lapStart;
       this.lapTimes.push(lapTime);
@@ -328,6 +361,96 @@ const raceFlow = {
     return false;
   },
 
+  // ------------------------------------------------------------------ battle
+  /** A balloon just popped on `kart` (called from Kart.spinOut in battle). */
+  onBalloonPop(kart) {
+    if (!this.battle || this.battle.over || kart.eliminated) return;
+    kart.balloons = Math.max(0, kart.balloons - 1);
+    this.audio.sfx('pop');
+    // Only the player's own pops drive the HUD pip readout.
+    if (kart.isPlayer) this.hud.setBattle(kart.balloons, this.battle.time);
+    if (kart.balloons <= 0) return this.eliminate(kart);
+    if (kart.isPlayer) {
+      this.hud.toast('BALLOON POPPED! ' + '\u{1F388}'.repeat(kart.balloons), 'red', 1.4);
+    } else if (this.battle.order.length || Math.random() < 0.6) {
+      this.hud.toast(kart.def.name.toUpperCase() + ' POPPED!', 'cyan', 1.2);
+    }
+  },
+
+  /** A kart ran out of balloons: poof, out of the battle. */
+  eliminate(kart) {
+    if (kart.eliminated || !this.battle || this.battle.over) return;
+    kart.eliminated = true;
+    this.battle.order.push(kart.def.id);
+    kart.say('\u{1F4A5}', 2.2);
+    kart.spin = Math.max(kart.spin, 1.1);
+    kart.invuln = 2;
+    const t = this.track;
+    this.fx.burst?.(kart.x, kart.y + 0.8, kart.z, 26, 10, [4, 2.2, 2.4], 0.6, 0.55);
+    this.hud.toast('\u{1F388} ' + kart.def.name.toUpperCase() + ' IS OUT!', 'red', 2);
+    if (kart.isPlayer) {
+      this.battle.playerOut = true;
+      this.endBattle();
+    } else if (this.karts.filter((k) => !k.eliminated).length <= 1) {
+      this.endBattle();
+    }
+  },
+
+  /** Battle ranking: survivors by balloons, then the popped in reverse order. */
+  battleRanking() {
+    const alive = this.karts
+      .filter((k) => !k.eliminated)
+      .sort((a, b) => b.balloons - a.balloons || b.progress - a.progress);
+    const out = this.battle.order
+      .slice()
+      .reverse()
+      .map((id) => this.karts.find((k) => k.def.id === id))
+      .filter(Boolean);
+    return [...alive, ...out];
+  },
+
+  /** Battle clock + end conditions, driven from the race loop. */
+  updateBattle(dt) {
+    const b = this.battle;
+    if (!b || b.over || this.state !== 'race') return;
+    b.time -= dt;
+    this.hud.setBattleTime(Math.max(0, b.time));
+    if (b.time <= 0) return this.endBattle();
+    if (this.karts.filter((k) => !k.eliminated).length <= 1) this.endBattle();
+  },
+
+  /** Settle the battle: rank the field, banner, then the results panel. */
+  endBattle() {
+    const b = this.battle;
+    if (!b || b.over) return;
+    b.over = true;
+    this.ranked = this.battleRanking();
+    this.ranked.forEach((k, i) => {
+      k.rank = i + 1;
+      k.finished = true;
+      if (!k.finishTime) k.finishTime = 0;
+    });
+    if (this.paused) this.togglePause(false);
+    this.player.item = null;
+    this.player.roll = 0;
+    this.hud.setItem(null);
+    this.setState('finish');
+    const won = this.player.rank === 1 && !b.playerOut;
+    this.hud.banner(won ? 'VICTORY!' : 'POPPED!', 'final', 3.5);
+    this.audio.stopMusic();
+    this.audio.sfx('finish');
+    if (won) {
+      this.player.say('\u{1F3C6}', 6);
+      const t = this.track;
+      for (let i = 0; i < 3; i++) {
+        setTimeout(() => {
+          this.fx.confetti(t.px[0], t.py[0] + 10, t.pz[0], 150);
+        }, i * 500);
+      }
+    }
+    this.audio.setStar(false);
+  },
+
   onPlayerFinish() {
     if (this.paused) this.togglePause(false);
     this.player.item = null;
@@ -392,7 +515,8 @@ const raceFlow = {
       }
     }
     this.hud.results(this.ranked, this.player, this.lapTimes, '', false, cup,
-      this.timeTrial ? (this.newRecord ? 'NEW RECORD!' : 'TIME TRIAL!') : null);
+      this.timeTrial ? (this.newRecord ? 'NEW RECORD!' : 'TIME TRIAL!') : null,
+      this.battle ? 'battle' : null);
     // Fit the panel now that its content (and real height) is known.
     this.fitUI();
     this.menus.hideResults = null;
@@ -454,6 +578,7 @@ const raceFlow = {
 
   restartRace() {
     this.hud.hideResults();
+    if (this.battle) return this.startBattle();
     if (this.cup) {
       this.cup.race = Math.max(0, this.cup.race - 1);
       return this.startCupRace();
@@ -463,6 +588,7 @@ const raceFlow = {
 
   toTitle() {
     this.cup = null;
+    this.battle = null;
     this.hud.show(false);
     this.hud.hideResults();
     this.audio.stopMusic();

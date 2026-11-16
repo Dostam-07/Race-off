@@ -117,7 +117,8 @@ export class Kart {
     this.wheelSpin = 0;
     this.pitch = 0;
     this.pitchT = 0;
-    this.roll = 0;
+    this.roll = 0; // item-roulette timer (original: c.roll)
+    this.rollVis = 0; // visual lean (original: c.roll_)
     this.squash = 0;
     this.turn = 0;
     this.offroad = false;
@@ -232,6 +233,10 @@ export class Kart {
     if (this.shield > 0) {
       this.popShield();
       return false;
+    }
+    // Battle: item hits pop a balloon; out of balloons means out of the fight.
+    if (this.game.battle && !this.game.battle.over && !this.eliminated) {
+      this.game.onBalloonPop(this);
     }
     this.say('\u{1F635}', 1.6);
     this.spin = 1.25;

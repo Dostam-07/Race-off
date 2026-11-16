@@ -74,6 +74,17 @@ body.mp #lobby { display: flex; } body.mp #modes { display: none; }
 .lvl[data-l=jungle] .art { background-image: radial-gradient(circle at 30% 110%, #0c4a22 0 40%, transparent 41%), radial-gradient(circle at 80% 105%, #12602c 0 46%, transparent 47%), linear-gradient(180deg, #d8f08a, #49b545 60%, #1c6b2e); }
 .lvl[data-l=sky] .art { background-image: radial-gradient(circle at 30% 30%, #ff5fd2 0 5%, transparent 12%), radial-gradient(circle at 72% 22%, #ffd23e 0 4%, transparent 11%), linear-gradient(180deg, #0a0a30, #3a1a6a 60%, #7a3cff); }
 .lvl[data-l=volcano] .art { background-image: radial-gradient(circle at 50% 30%, #ffb03a 0 6%, transparent 16%), conic-gradient(from 150deg at 50% 22%, #2b1230 0 60deg, transparent 60deg), linear-gradient(180deg, #3a1245, #8a2338 60%, #ff6a1e); }
+.lvl[data-l=arena1] .art { background-image: radial-gradient(circle at 24% 30%, #ff5f6b 0 7%, transparent 8%), radial-gradient(circle at 68% 22%, #ffd23e 0 6%, transparent 7%), radial-gradient(circle at 82% 52%, #5fe3ff 0 5%, transparent 6%), linear-gradient(180deg, #a8d08a, #6a9a55 55%, #3f6a35); }
+.lvl.arena i { background: #7a3cff; }
+
+/* battle HUD: the lap slot becomes balloon pips, the timer counts down */
+#lap.battle i { display: none; }
+#lap.battle b { font-size: 40px; font-style: normal; margin: 0 2px 0 8px; }
+#timer.low { color: #ff5f6b; animation: battleflash .5s steps(2) infinite; }
+@keyframes battleflash { 50% { opacity: .45; } }
+#board .row .bl { margin-left: auto; padding-right: 6px; font-size: 13px; letter-spacing: -2px; }
+#board .row .bl:empty { display: none; }
+#results .rr .t { font-size: inherit; }
 .lvl i { position: absolute; left: calc(var(--cw) * -.07); top: calc(var(--cw) * -.07); width: calc(var(--cw) * .25); height: calc(var(--cw) * .25); border-radius: 50%; background: #ff3b6b; border: 3px solid #fff; box-shadow: 0 3px 0 var(--ink); display: flex; align-items: center; justify-content: center; font-size: calc(var(--cw) * .14); font-weight: 900; padding-right: .1em; }
 .lvl b { display: block; font-size: calc(var(--cw) * .087); letter-spacing: 0; padding: calc(var(--cw) * .055) 0 0 calc(var(--cw) * .07); white-space: nowrap; }
 .lvl small { display: block; font-size: calc(var(--cw) * .07); letter-spacing: .22em; opacity: .75; padding: 2px 0 calc(var(--cw) * .045) calc(var(--cw) * .07); }

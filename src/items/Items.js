@@ -348,7 +348,7 @@ export class Items {
     g.audio.sfx('thunder');
     let hit = 0;
     for (const k of g.karts) {
-      if (k === caster || k.progress < caster.progress || k.finished) continue;
+      if (k === caster || k.eliminated || k.progress < caster.progress || k.finished) continue;
       if (k.star > 0) continue;
       if (k.shield > 0) {
         if (!k.remote) k.popShield();
@@ -370,6 +370,8 @@ export class Items {
         k.drifting = false;
         k.speed *= 0.7;
         k.say('\u26A1', 2.2);
+        // In battle the bolt is a weapon: it pops a balloon too.
+        if (g.battle && !g.battle.over) g.onBalloonPop(k);
         if (k.isPlayer) {
           g.hud.toast('ZAPPED!', 'red', 1.3);
           g.shake = 0.5;
@@ -599,7 +601,7 @@ export class Items {
 
       if (!hit) {
         for (const k of g.karts) {
-          if (k === r.owner || (r.target && k !== r.target)) continue;
+          if (k === r.owner || k.eliminated || (r.target && k !== r.target)) continue;
           const dx = k.x - _v.x;
           const dz = k.z - _v.z;
           if (dx * dx + dz * dz < 5) {
@@ -641,7 +643,7 @@ export class Items {
       let dead = trap.age > 28;
 
       for (const k of g.karts) {
-        if (k.remote || (k === trap.owner && trap.age < 1.2)) continue;
+        if (k.remote || k.eliminated || (k === trap.owner && trap.age < 1.2)) continue;
         const dx = k.x - trap.x;
         const dz = k.z - trap.z;
         if (dx * dx + dz * dz < 2.9 && Math.abs(k.y - trap.y) < 1.5) {
