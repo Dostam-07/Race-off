@@ -82,6 +82,7 @@ body.mp #lobby { display: flex; } body.mp #modes { display: none; }
 #lap.battle b { font-size: 40px; font-style: normal; margin: 0 2px 0 8px; }
 #timer.low { color: #ff5f6b; animation: battleflash .5s steps(2) infinite; }
 @keyframes battleflash { 50% { opacity: .45; } }
+#best.low { color: #ff5f6b; }
 #board .row .bl { margin-left: auto; padding-right: 6px; font-size: 13px; letter-spacing: -2px; }
 #board .row .bl:empty { display: none; }
 #results .rr .t { font-size: inherit; }

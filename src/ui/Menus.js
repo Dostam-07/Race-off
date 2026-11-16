@@ -18,7 +18,8 @@ export class Menus {
     this.pick = 0;
     this.mode = 'gp';
     this.tt = false;
-this.battle = false;
+    this.battle = false;
+    this.elim = false;
     this.cc = 1;
     this.mirror = false;
     this.lastFocus = null;
@@ -108,6 +109,7 @@ this.battle = false;
       document.body.classList.remove('solo');
       if (this.tt && this.mode !== 'gp') g.startTimeTrial(this.mode);
       else if (this.battle) g.startBattle(this.mode);
+      else if (this.elim) g.startElimination(this.mode);
       else g.startCupOrTrack(this.mode);
     });
 
@@ -139,11 +141,12 @@ this.battle = false;
 
     this.buildKeymap();
 
-    // Time-trial / battle toggle on the track picker.
+    // Time-trial / battle / elimination toggle on the track picker.
     document.querySelectorAll('#ttmode .mchip').forEach((el) => {
       el.addEventListener('click', () => {
         this.tt = el.dataset.tt === '1';
         this.battle = el.dataset.battle === '1';
+        this.elim = el.dataset.elim === '1';
         document.querySelectorAll('#ttmode .mchip').forEach((e) =>
           e.classList.toggle('on', e === el));
         this.filterLevels();
@@ -348,19 +351,25 @@ this.battle = false;
   updateGoLabel(trackName) {
     const go = $('m-go');
     if (!go) return;
-    if (this.mode === 'gp') go.textContent = 'START GRAND PRIX';
+    if (this.mode === 'gp' && !this.tt && !this.battle && !this.elim) go.textContent = 'START GRAND PRIX';
     else {
       const name = trackName || document.querySelector('#cup .lvl.on b')?.textContent || 'RACE';
-      go.textContent = this.battle ? `BATTLE: ${name}` : this.tt ? `TIME TRIAL: ${name}` : `START ${name}`;
+      go.textContent = this.battle ? `BATTLE: ${name}`
+        : this.tt ? `TIME TRIAL: ${name}`
+        : this.elim ? `ELIMINATION: ${name}`
+        : `START ${name}`;
     }
   }
 
-  /** Show race tracks for race/time-trial, arenas for battle. */
+  /** Show race tracks for race/time-trial/elimination, arenas for battle.
+   *  The GP card only makes sense for plain races - hide it otherwise so the
+   *  GO button can never start a grand prix in a per-track mode. */
   filterLevels() {
     const lvls = document.querySelectorAll('#cup .lvl');
+    const perTrack = this.tt || this.battle || this.elim;
     lvls.forEach((e) => {
       const arena = e.classList.contains('arena');
-      e.hidden = this.battle ? !arena : arena;
+      e.hidden = this.battle ? !arena : arena || (perTrack && e.classList.contains('gp'));
     });
     // If the current pick is hidden, select the first visible one.
     const on = document.querySelector('#cup .lvl.on');
@@ -377,7 +386,9 @@ this.battle = false;
     $('modes')?.classList.remove('on');
     $('cup')?.classList.add('on');
     document.querySelectorAll('#ttmode .mchip').forEach((e) =>
-      e.classList.toggle('on', (e.dataset.tt === '1') === !!this.tt && (e.dataset.battle === '1') === !!this.battle));
+      e.classList.toggle('on', (e.dataset.tt === '1') === !!this.tt
+        && (e.dataset.battle === '1') === !!this.battle
+        && (e.dataset.elim === '1') === !!this.elim));
     this.filterLevels();
     const first = document.querySelector('#cup .lvl.on') || document.querySelector('#cup .lvl:not([hidden])');
     if (first) {

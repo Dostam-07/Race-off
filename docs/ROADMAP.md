@@ -20,8 +20,12 @@ reason to come back, and smoother community features.
    pips, rematch flow. Also fixed a port bug where the item roulette shared
    the kart's visual-lean field, handing out free items on lean crossings.)*
    Still open: coin-rush variant, more arenas.
-2. **Elimination race** — every 20 seconds the last-place kart explodes
-   (bowser-fire style banner + boom SFX). Great with 6-player online lobbies.
+2. **Elimination race** ✅ *(shipped: pick ELIMINATION on the track picker;
+   normal laps + items, `NEXT OUT` countdown every 20s in the best-lap slot
+   (red under 5s), last-place kart explodes and coasts to a halt, positions by
+   finish order then reverse pop order, LAST KART STANDING! / ELIMINATED!
+   banners, results variant with 💥 OUT rows, rematch flow.)*
+   Still open: shorter clock at higher engine classes, MP lobby flag.
 3. **Team race** — 3v3 with team colours on karts and a combined team score
    in the results panel. Pairs naturally with the public room list
    (`team: true` room flag).

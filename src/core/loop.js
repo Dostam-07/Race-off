@@ -124,7 +124,10 @@ const loopMethods = {
     // ---- state transitions
     if (this.state === 'intro') this.updateIntro(dt);
     if (this.state === 'finish' && this.st > 3.6) this.showResults();
-    if (this.state === 'race') this.updateBattle(dt);
+    if (this.state === 'race') {
+      this.updateBattle(dt);
+      this.updateElimination(dt);
+    }
 
     // ---- karts
     // While hosting, the rubber-band baseline is the average human progress.
@@ -165,13 +168,18 @@ const loopMethods = {
 
     // ---- ranking
     // Battles rank by balloons (survivors first, then the popped in reverse
-    // order) - race progress is meaningless without laps.
-    this.ranked = this.battle ? this.battleRanking() : this.karts.slice().sort((a, b) => {
-      if (a.finished && b.finished) return a.finishTime - b.finishTime;
-      if (a.finished) return -1;
-      if (b.finished) return 1;
-      return b.progress - a.progress;
-    });
+    // order) and elimination races sink the popped to the bottom - race
+    // progress alone is meaningless for both.
+    this.ranked = this.battle
+      ? this.battleRanking()
+      : this.elim
+        ? this.elimRanking()
+        : this.karts.slice().sort((a, b) => {
+          if (a.finished && b.finished) return a.finishTime - b.finishTime;
+          if (a.finished) return -1;
+          if (b.finished) return 1;
+          return b.progress - a.progress;
+        });
     this.ranked.forEach((k, i) => { k.rank = i + 1; });
 
     // ---- rank change feedback
