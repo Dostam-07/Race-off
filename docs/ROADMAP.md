@@ -41,7 +41,9 @@ reason to come back, and smoother community features.
    rings, place points banked per side on every finish, results lead with
    TEAM VICTORY/DEFEAT + per-row side colours and a two-team footer, rematch
    flow. Reuses the existing POINTS table so team and GP maths agree.)*
-   Still open: online MP lobby `team: true` flag, team-tinted liveries.
+   Online: the lobby has a `TEAM RACE: ON/OFF` chip for the host; the start
+   message carries a racer-to-side map so host and guests always agree.)*
+   Still open: team-tinted liveries, team scoring across a GP series.
 4. **Ghost championships** — the daily challenge keeps your best ghost;
    race *your own* ghost head-to-head on every track, not just time trial.
 5. **More tracks** — a night neon circuit (emissive materials + headlight

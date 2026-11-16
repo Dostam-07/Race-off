@@ -217,30 +217,44 @@ const raceFlow = {
     this.beginIntro();
   },
 
-  /** Split the field into two teams, alternating by grid slot so the sides
-   *  are balanced. The player's team is always called 'red'. */
-  assignTeams() {
+  /** Split the field into two teams by GRID SLOT (even = red, odd = blue).
+   *  Deriving it from the slot rather than from randomness means every client
+   *  computes the identical split with nothing extra on the wire, solo and
+   *  online alike. The human player's side is then called 'red' so the
+   *  results panel can always say "your team". */
+  assignTeams(byRacer = null) {
     const team = this.team;
     team.pts = { red: 0, blue: 0 };
     team.members = { red: [], blue: [] };
-    const blueFirst = Math.random() < 0.5;
-    this.karts.forEach((k, i) => {
-      // Alternate sides, but the player always lands on red.
-      let side = (i % 2 === 0) === blueFirst ? 'blue' : 'red';
-      if (k.isPlayer) side = 'red';
-      k.team = side;
-      team.members[side].push(k);
-    });
-    // If the player's side ended up lopsided, move the tail of blue over.
-    const diff = team.members.blue.length - team.members.red.length;
-    if (diff > 1) {
-      const moved = team.members.blue.splice(1);
-      for (const k of moved) {
-        k.team = 'red';
-        team.members.red.push(k);
+    if (byRacer) {
+      // Online: the host's authoritative racer -> side map, so every client
+      // agrees even though each sees its own player in a different slot.
+      for (const k of this.karts) k.team = byRacer[k.def.id] || 'red';
+    } else {
+      // Solo: alternate by grid slot, which is deterministic locally.
+      const bySlot = this.karts.slice().sort((a, b) => a.slot - b.slot);
+      bySlot.forEach((k) => {
+        k.team = k.slot % 2 === 0 ? 'red' : 'blue';
+      });
+      // Mirror the labels if the player landed on the odd side, so "red" is
+      // always the player's side.
+      const me = this.player;
+      if (me && me.team === 'blue') {
+        this.karts.forEach((k) => {
+          k.team = k.team === 'red' ? 'blue' : 'red';
+        });
       }
-      this._teamRebalanced = true;
     }
+    for (const k of this.karts) team.members[k.team].push(k);
+  },
+
+  /** Build the racer -> side map the host sends with a team race start. */
+  teamMap() {
+    const map = {};
+    for (const k of this.karts) {
+      if (k.team) map[k.def.id] = k.team;
+    }
+    return map;
   },
 
   /** Team standings for the HUD/results: [{id, pts, karts}] sorted by points. */

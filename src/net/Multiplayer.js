@@ -327,6 +327,8 @@ const mpMethods = {
   renderLobby() {
     const mp = this.mp;
     if (!mp || this.state !== 'title') return;
+    // Keep the team-mode chip in sync with the host's choice.
+    this.menus.updateTeamBtn?.();
     const players = mp.players;
     const myPid = mp.me.pid;
     const host = document.getElementById('l-players');
@@ -465,6 +467,30 @@ const mpMethods = {
     navigator.clipboard?.writeText(url).then(() => say('LINK COPIED!')).catch(() => say(url));
   },
 
+  /** Host only: decide the team split for the room. Builds the field first so
+   *  the slots match the race exactly, then reports racer -> side. */
+  mpTeamMap() {
+    const mp = this.mp;
+    if (!mp || !mp.isHost) return null;
+    try {
+      // Decide sides on a scratch field laid out exactly like the race, so the
+      // slots line up. `lastStart` may not exist yet: use the live roster.
+      const grid = mp.lastStart?.grid
+        || [...Array(GRID).keys()];
+      this.buildField(this.pickChar(), GRID - 1);
+      grid.forEach((racer, slot) => {
+        const kart = this.kartOf(racer);
+        if (kart) kart.place(slot);
+      });
+      this.team = { pts: { red: 0, blue: 0 }, members: { red: [], blue: [] } };
+      this.assignTeams();
+      const map = this.teamMap();
+      return Object.keys(map).length > 1 ? map : null;
+    } catch {
+      return null;
+    }
+  },
+
   // ------------------------------------------------------------- race set-up
   /** Build the grid from the host's start message and begin the intro. */
   startNetRace(info) {
@@ -472,9 +498,13 @@ const mpMethods = {
     if (!mp || this.state !== 'title') return;
     this.timeTrial = false;
     this.noItems = false;
-    // The host's engine class and mirror choice rule the room.
+    // The host's engine class, mirror and team choice rule the room.
     if (Number.isFinite(info.cc)) this.cc = info.cc;
     this.mirror = !!info.mirror;
+    // A networked race is never a solo special mode.
+    this.battle = null;
+    this.elim = null;
+    this.team = null;
 
     // Make sure I am driving the racer the host assigned me.
     if (this.rid(this.player) !== mp.me.racer) this.menus.select(mp.me.racer, true);
@@ -497,6 +527,16 @@ const mpMethods = {
     const names = {};
     for (const r of info.humans) names[ROSTER[r].id] = info.names[r] || ROSTER[r].name;
     this.hud.setNames(names);
+
+    // Team race: adopt the host's racer -> side map so every client shows the
+    // same rings, even though each sees its own player in a different slot.
+    // The host must use the SAME map it broadcast - recomputing here would
+    // silently split the two views.
+    if (info.team) {
+      this.team = { pts: { red: 0, blue: 0 }, members: { red: [], blue: [] } };
+      const map = info.teams || (mp.isHost ? mp.lastStart?.teams : null);
+      this.assignTeams(map || null);
+    }
 
     if (mp.gp && mp.gp.i < TRACK_ORDER.length) {
       this.cup = { race: mp.gp.i + 1, room: true };
@@ -539,6 +579,13 @@ const mpMethods = {
     const names = {};
     for (const r of info.humans) names[ROSTER[r].id] = info.names[r] || ROSTER[r].name;
     this.hud.setNames(names);
+
+    if (info.team) {
+      this.team = { pts: { red: 0, blue: 0 }, members: { red: [], blue: [] } };
+      this.assignTeams(info.teams || null);
+    } else {
+      this.team = null;
+    }
 
     this.menus.hideAll();
     this.audio.init(this.track.def.id);

@@ -51,7 +51,8 @@ grip/acceleration profile and a hand-modelled 3D kart.
   rolling (or most balloons when the 2-minute clock runs out) wins.
 - 🔴 **Team race (3 v 3)** — pick TEAM to split the field into red and blue
   sides; finishing places score for the whole team, so depth beats one
-  runaway leader. Team-coloured rings under every kart.
+  runaway leader. Team-coloured rings under every kart. Works online too —
+  the host toggles it in the lobby.
 - 💥 **Elimination race** — pick ELIMINATION on any track: normal laps and
   items, but every 20 seconds the last-place kart explodes and coasts to a
   stop. Survive to the end - last kart standing wins.
@@ -238,6 +239,11 @@ whole team**.
 - The results panel leads with the **team** score (`TEAM VICTORY! 20-0`), tints
   every row with its side colour and adds the two totals in the footer.
 - Restart from the results panel for an instant rematch on the same track.
+
+**Online:** the room host gets a `TEAM RACE: ON/OFF` toggle in the lobby. Both
+clients build the identical split — the host decides the sides and sends a
+racer-to-side map with the start message, so a guest never sees a different
+red/blue from the host.
 
 ## 🎈 Balloon Brawl (battle mode)
 

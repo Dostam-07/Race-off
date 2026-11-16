@@ -21,6 +21,7 @@ export class Menus {
     this.battle = false;
     this.elim = false;
     this.team = false;
+    this.mpTeam = false; // team mode for the online room (host toggles)
     this.cc = 1;
     this.mirror = false;
     this.lastFocus = null;
@@ -70,10 +71,18 @@ export class Menus {
     $('l-vis')?.addEventListener('click', () => {
       if (g.mp && g.mp.isHost) g.setRoomPublic(!g.mp.isPublic);
     });
+    $('l-team')?.addEventListener('click', () => {
+      if (!g.mp || !g.mp.isHost) return;
+      this.mpTeam = !this.mpTeam;
+      this.updateTeamBtn();
+      g.audio.sfx('tick');
+    });
     $('l-invite')?.addEventListener('click', () => g.copyInvite());
     $('l-leave')?.addEventListener('click', () => g.leaveRoom());
     $('l-start')?.addEventListener('click', () => {
-      if (g.mp && g.mp.isHost) g.mp.start({ cc: g.cc, mirror: g.mirror });
+      if (g.mp && g.mp.isHost) {
+        g.mp.start({ cc: g.cc, mirror: g.mirror, team: this.mpTeam, teams: () => g.mpTeamMap() });
+      }
     });
     $('l-name')?.addEventListener('input', (e) => {
       try {
@@ -351,6 +360,18 @@ export class Menus {
   }
 
   /** Start button label reflects GP vs track vs time trial. */
+  /** Lobby team-mode chip: host sees a live toggle, guests see the state. */
+  updateTeamBtn() {
+    const el = $('l-team');
+    if (!el) return;
+    const g = this.game;
+    const host = !!(g.mp && g.mp.isHost);
+    el.textContent = 'TEAM RACE: ' + (this.mpTeam ? 'ON' : 'OFF');
+    el.classList.toggle('on', this.mpTeam);
+    el.style.opacity = host ? '1' : '.5';
+    el.style.pointerEvents = host ? '' : 'none';
+  }
+
   updateGoLabel(trackName) {
     const go = $('m-go');
     if (!go) return;
@@ -413,6 +434,7 @@ export class Menus {
     $('modes')?.classList.remove('on');
     $('cup')?.classList.remove('on');
     $('lobby')?.classList.add('on');
+    this.updateTeamBtn();
     this.game.fitUI();
   }
 

@@ -518,6 +518,8 @@ export class Net {
           names,
           cc: Number.isFinite(msg.cc) ? msg.cc : 1,
           mirror: !!msg.mirror,
+          team: !!msg.team,
+          teams: msg.teams && typeof msg.teams === 'object' ? msg.teams : null,
         },
         Math.min(400, Math.max(0, +msg.delay || 0)),
       );
@@ -537,6 +539,8 @@ export class Net {
           names,
           cc: Number.isFinite(msg.cc) ? msg.cc : 1,
           mirror: !!msg.mirror,
+          team: !!msg.team,
+          teams: msg.teams && typeof msg.teams === 'object' ? msg.teams : null,
           level: typeof msg.level === 'string' ? msg.level : '',
         });
     } else if (msg.t === 'over') {
@@ -662,6 +666,8 @@ export class Net {
           names: this.lastStart.names,
           cc: this.lastStart.cc,
           mirror: this.lastStart.mirror,
+          team: this.lastStart.team,
+          teams: this.lastStart.teams,
           level: this.level,
         });
       }
@@ -697,7 +703,7 @@ export class Net {
   }
 
   /** Host: shuffle the grid, tell everyone and start the race locally.
-   *  opts carries the host's engine class and mirror flag to the guests. */
+   *  opts carries the host's engine class, mirror and team flags to the guests. */
   start(opts = {}) {
     if (!this.isHost || this.phase !== 'lobby' || this.status !== 'open') return false;
     this.phase = 'race';
@@ -712,7 +718,12 @@ export class Net {
     const grid = [...Array(RACER_MAX).keys()].filter((r) => !humans.includes(r)).concat(humans);
 
     // Remember the race setup so late joiners can spectate it.
-    this.lastStart = { grid, humans, names, cc: opts.cc, mirror: !!opts.mirror };
+    // The host decides the sides and sends the racer -> side map, so every
+    // client agrees even though each sees its own player in a different slot.
+    const teams = opts.team && typeof opts.teams === 'function' ? opts.teams() : null;
+    this.lastStart = {
+      grid, humans, names, cc: opts.cc, mirror: !!opts.mirror, team: !!opts.team, teams,
+    };
 
     let worst = 0;
     for (const g of this.guests.values()) worst = Math.max(worst, Math.min(600, g.rtt));
@@ -724,10 +735,14 @@ export class Net {
         names,
         cc: opts.cc,
         mirror: !!opts.mirror,
+        team: !!opts.team,
+        teams,
         delay: (worst - Math.min(600, g.rtt)) / 2,
       });
     }
-    return this.h.start({ grid, humans, names, cc: opts.cc, mirror: !!opts.mirror }, worst / 2);
+    return this.h.start({
+      grid, humans, names, cc: opts.cc, mirror: !!opts.mirror, team: !!opts.team, teams,
+    }, worst / 2);
   }
 
   pick(racer, name) {
