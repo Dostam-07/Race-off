@@ -186,9 +186,11 @@ export class HUD {
       this.itemImg.style.display = 'none';
       this.itemBox.classList.remove('has');
       this.itemNameEl.textContent = '';
+      this.itemImg.alt = '';
       return;
     }
     this.itemImg.src = this.icons[item] || '';
+    this.itemImg.alt = ITEM_NAMES[item] || item; // screen readers + no-image
     this.itemImg.style.display = 'block';
     this.itemBox.classList.add('has');
     this.itemBox.classList.remove('pop');

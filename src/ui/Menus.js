@@ -9,6 +9,7 @@ import { ROSTER, CHAR_TUNING, getUnlocks } from '../kart/KartModel.js';
 import { TRACK_ORDER } from '../tracks/definitions.js';
 import { dailyConfig, dailyFriendTime } from '../core/daily.js';
 import { dirAvailable, dirList } from '../net/directory.js';
+import { ACTION_LABELS } from '../core/Input.js';
 const STORE_RACER = 'ro-racer';
 
 export class Menus {
@@ -122,6 +123,19 @@ export class Menus {
     $('p-restart')?.addEventListener('click', () => { g.togglePause(false); g.restartRace(); });
     $('p-menu')?.addEventListener('click', () => { g.togglePause(false); g.toTitle(); });
     $('p-sound')?.addEventListener('click', () => this.updateSoundBtn());
+
+    // Graphics quality chips: save the choice and reload to rebuild the
+    // renderer (anti-aliasing and shadow size are set at construction).
+    document.querySelectorAll('#p-quality .mchip').forEach((chip) => {
+      chip.addEventListener('click', () => {
+        try {
+          localStorage.setItem('ro-quality', chip.dataset.q);
+        } catch { /* private mode */ }
+        location.reload();
+      });
+    });
+
+    this.buildKeymap();
 
     // Time-trial toggle on the track picker.
     document.querySelectorAll('#ttmode .mchip').forEach((el) => {
@@ -382,10 +396,62 @@ export class Menus {
     if (btn) btn.textContent = muted ? 'SOUND: OFF' : 'SOUND: ON';
   }
 
+  /** Build the control-remapping rows in the pause menu. */
+  buildKeymap() {
+    const grid = document.getElementById('km-grid');
+    const input = this.game.input;
+    if (!grid || !input) return;
+    grid.innerHTML = '';
+    for (const action of Object.keys(ACTION_LABELS)) {
+      const row = document.createElement('div');
+      row.className = 'km-row';
+      const name = document.createElement('span');
+      name.textContent = ACTION_LABELS[action];
+      const key = document.createElement('b');
+      key.id = 'km-' + action;
+      key.textContent = input.label(action);
+      row.append(name, key);
+      row.addEventListener('click', () => {
+        if (input.capturing) return;
+        grid.querySelectorAll('.km-row').forEach((r) => r.classList.remove('listen'));
+        row.classList.add('listen');
+        key.textContent = 'PRESS KEY';
+        input.capture(action, () => {
+          row.classList.remove('listen');
+          this.refreshKeyHints();
+        });
+      });
+      grid.appendChild(row);
+    }
+    this.refreshKeyHints();
+  }
+
+  /** Sync every key hint (pause rows + the in-race ITEM key badge). */
+  refreshKeyHints() {
+    const input = this.game.input;
+    if (!input) return;
+    for (const action of Object.keys(ACTION_LABELS)) {
+      const el = document.getElementById('km-' + action);
+      if (el) el.textContent = input.label(action);
+    }
+    const ik = document.getElementById('itemkey');
+    if (ik) ik.textContent = input.label('item');
+  }
+
   pause(on) {
     $('pause')?.classList.toggle('on', on);
     const btn = $('p-sound');
     if (btn && on) btn.textContent = this.game.audio.muted ? 'SOUND: OFF' : 'SOUND: ON';
+    if (on) {
+      let saved = '';
+      try {
+        saved = localStorage.getItem('ro-quality') || '';
+      } catch { /* private mode */ }
+      const active = saved || this.game.quality;
+      document.querySelectorAll('#p-quality .mchip').forEach((c) =>
+        c.classList.toggle('on', c.dataset.q === active),
+      );
+    }
   }
 
   // ------------------------------------------------------------------- input

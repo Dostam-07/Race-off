@@ -1,0 +1,14 @@
+{
+ "out": {
+  "jsonCors": 204,
+  "plain": 204,
+  "beacon": true
+ },
+ "counts": {
+  "load": 3,
+  "race_start": 0,
+  "race_finish": 0,
+  "room_create": 0,
+  "room_join": 0
+ }
+}

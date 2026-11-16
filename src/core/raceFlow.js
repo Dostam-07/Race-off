@@ -12,6 +12,7 @@ import { addUnlock } from '../kart/KartModel.js';
 import { Ghost, loadGhost, saveGhost, REC_EVERY, MAX_SAMPLES, REC_DT } from '../kart/Ghost.js';
 import { dailyConfig, dailyResult, dailySave, dailySaveStarted, dailyRng, dailyFriendTime } from './daily.js';
 import { STORE, sset } from '../net/Multiplayer.js';
+import { track as trackEvent } from './analytics.js';
 
 export const GRID = 6;
 export const POINTS = [15, 12, 10, 8, 6, 4];
@@ -202,6 +203,14 @@ const raceFlow = {
     this.countT = 0;
     this.hud.show(true);
     this.cameraRig.reset();
+    // Funnel: a race was started (every entry path funnels through here).
+    trackEvent('race_start', {
+      track: this.track?.def?.id || '',
+      mode: this.mp ? 'mp'
+        : this.timeTrial ? 'tt'
+        : this.daily ? 'daily'
+        : this.cup ? 'gp' : 'solo',
+    });
   },
 
   // ------------------------------------------------------------------ looping
@@ -345,6 +354,11 @@ const raceFlow = {
   showResults() {
     this.setState('done');
     this.fitUI(); // the panel scales to the viewport
+    // Funnel: the race ran to the results.
+    trackEvent('race_finish', {
+      track: this.track?.def?.id || '',
+      place: this.player?.rank || 0,
+    });
     // The race is over: free the room's phase so the host can start the next
     // race, waiting guests become racers again, spectators return to the lobby.
     if (this.mp && this.mp.isHost && !this.mp.dead) this.mp.raceOver();

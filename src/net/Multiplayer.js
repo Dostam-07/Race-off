@@ -10,6 +10,7 @@
 
 import { Net, makeCode, cleanCode, cleanName, ROOM_PREFIX, EMOTES } from './Net.js';
 import { dirAvailable, dirQuick, dirList, dirPublish } from './directory.js';
+import { track as trackEvent } from '../core/analytics.js';
 import { ROSTER } from '../kart/KartModel.js';
 import { TRACK_ORDER, TRACKS } from '../tracks/definitions.js';
 
@@ -78,6 +79,7 @@ const mpMethods = {
   /** Host a fresh room. */
   startMultiplayer(isPublic = false) {
     if (this.mp || this.state !== 'title') return;
+    trackEvent('room_create');
     const code = makeCode();
     for (const k of [STORE.mgp, STORE.gen, STORE.heir, STORE.had]) sset(k, null);
     this.openRoom(code, { host: true, rehost: false, public: isPublic });
@@ -112,6 +114,7 @@ const mpMethods = {
   /** Join an existing room by code (from the URL or typed in). */
   joinRoom(code) {
     if (this.mp || this.state !== 'title') return;
+    trackEvent('room_join');
     this.openRoom(cleanCode(code), { host: false, rehost: false });
   },
 

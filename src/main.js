@@ -8,6 +8,7 @@ import { Game } from './core/Game.js';
 import { installRaceFlow } from './core/raceFlow.js';
 import { installLoop } from './core/loop.js';
 import { installMultiplayer } from './net/Multiplayer.js';
+import { track } from './core/analytics.js';
 
 installRaceFlow(Game);
 installLoop(Game);
@@ -22,11 +23,25 @@ function fail(err) {
   if (label) label.textContent = 'Error: ' + (err?.message || err);
 }
 
+/** Render quality: explicit ?quality= wins, then the saved choice, then a
+ *  conservative guess for phones/tablets. `?lite` still works (legacy). */
+export function detectQuality(params) {
+  const valid = ['low', 'medium', 'high'];
+  const q = (params.get('quality') || '').toLowerCase();
+  if (valid.includes(q)) return q;
+  if (params.has('lite')) return 'low';
+  try {
+    const saved = localStorage.getItem('ro-quality');
+    if (valid.includes(saved)) return saved;
+  } catch { /* private mode */ }
+  const touch = matchMedia('(pointer: coarse)').matches;
+  const weak = (navigator.hardwareConcurrency || 4) <= 4 || (navigator.deviceMemory || 4) <= 4;
+  return touch ? (weak ? 'low' : 'medium') : 'high';
+}
+
 async function main() {
   const params = new URLSearchParams(location.search);
-  const quality = params.get('lite') !== null ? 'low' : 'high';
-
-  const game = new Game(document.body, { quality });
+  const game = new Game(document.body, { quality: detectQuality(params) });
   window.game = game;
 
   // loadModels reports a 0..1 fraction; show it as a clean percentage.
@@ -38,6 +53,9 @@ async function main() {
 
   splash?.classList.remove('on');
   setTimeout(() => splash?.remove(), 700);
+
+  // Funnel step 1: the game is loaded and playable.
+  track('load', { quality: game.quality });
 
   game.start();
   game.resize();

@@ -13,6 +13,7 @@
 //   DELETE /rooms/:code  close a room (host leaving)
 //   POST /scores       { track, cc, name, time }  submit a time-trial time
 //   GET  /scores/:track?cc=1   top 10 times for that track + engine class
+//   POST /track        { event, ... }  funnel analytics counter (no PII)
 //
 // Rooms expire after 45s without a heartbeat. The registry is mirrored to
 // rooms.json every 10s and reloaded on boot so a restart keeps the directory.
@@ -80,6 +81,36 @@ setInterval(() => {
 }, 5000).unref();
 
 const validTime = (t) => Number.isFinite(t) && t > 1 && t < 1000000;
+
+// --------------------------------------------------------------- funnel logs
+// POST /track - append-only counters: loaded -> race_start -> race_finish ->
+// room_create. No identifiers are stored; just event name + coarse props.
+const EVENTS = new Set(['load', 'race_start', 'race_finish', 'room_create', 'room_join']);
+const counts = { load: 0, race_start: 0, race_finish: 0, room_create: 0, room_join: 0 };
+const byTrack = {}; // event -> { track -> n }
+
+// GET /track - the funnel summary (handy for the operator).
+// POST /track - count one event.
+const handleTrack = (res, method, body) => {
+  if (method === 'GET') {
+    return json(res, 200, { counts, byTrack });
+  }
+  let msg;
+  try {
+    msg = JSON.parse(body || '{}');
+  } catch {
+    return json(res, 400, { error: 'bad json' });
+  }
+  const ev = String(msg.event || '');
+  if (!EVENTS.has(ev)) return json(res, 400, { error: 'bad event' });
+  counts[ev]++;
+  const track = typeof msg.track === 'string' ? msg.track.slice(0, 10) : '';
+  if (track) {
+    byTrack[ev] = byTrack[ev] || {};
+    byTrack[ev][track] = (byTrack[ev][track] || 0) + 1;
+  }
+  return json(res, 204, {});
+};
 
 const json = (res, code, body) => {
   const data = JSON.stringify(body);
@@ -170,6 +201,13 @@ const server = http.createServer(async (req, res) => {
       public: room.public,
       age: Date.now() - room.ts, // ms since the last heartbeat
     });
+  }
+
+  // POST /track - funnel analytics; GET /track - the summary
+  if (parts[0] === 'track' && parts.length === 1) {
+    return req.method === 'GET'
+      ? handleTrack(res, 'GET')
+      : handleTrack(res, 'POST', await readBody(req));
   }
 
   // POST /scores - submit a time-trial time

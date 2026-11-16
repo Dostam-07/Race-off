@@ -6,6 +6,53 @@
 
 import { clamp, isTouch } from './utils.js';
 
+// Remappable driving controls. Each action maps to a list of keys; the first
+// entry is the "primary" binding shown in the UI. Stored in localStorage as
+// `ro-keys`. System keys (pause, mute, restart, emotes, Enter) stay fixed.
+export const DEFAULT_KEYS = {
+  accel: ['ArrowUp', 'w'],
+  brake: ['ArrowDown', 's'],
+  left: ['ArrowLeft', 'a'],
+  right: ['ArrowRight', 'd'],
+  drift: [' ', 'Shift'],
+  turbo: ['Shift'],
+  item: ['e'],
+};
+
+const ACTIONS = Object.keys(DEFAULT_KEYS);
+
+export const ACTION_LABELS = {
+  accel: 'ACCELERATE',
+  brake: 'BRAKE / REVERSE',
+  left: 'STEER LEFT',
+  right: 'STEER RIGHT',
+  drift: 'DRIFT / HOP',
+  turbo: 'TURBO',
+  item: 'USE ITEM',
+};
+
+/** Load the saved keymap, filling any missing actions with the defaults. */
+export function loadKeymap() {
+  let saved = {};
+  try {
+    saved = JSON.parse(localStorage.getItem('ro-keys')) || {};
+  } catch { /* private mode or corrupt */ }
+  const map = {};
+  for (const a of ACTIONS) {
+    const v = saved[a];
+    map[a] = Array.isArray(v) && v.length && v.every((k) => typeof k === 'string')
+      ? v.slice(0, 3)
+      : DEFAULT_KEYS[a].slice();
+  }
+  return map;
+}
+
+export function saveKeymap(map) {
+  try {
+    localStorage.setItem('ro-keys', JSON.stringify(map));
+  } catch { /* private mode */ }
+}
+
 export class Input {
   constructor(game) {
     this.game = game;
@@ -20,17 +67,59 @@ export class Input {
     this.touchItem = 0;
     this.gamepad = null;
     this.enabled = false;
+    this.keymap = loadKeymap();
+    this.capturing = null; // action name while waiting for a remap keypress
     this.bind();
+  }
+
+  /** Is any key bound to `action` currently held down? */
+  has(action) {
+    const list = this.keymap[action];
+    for (let i = 0; i < list.length; i++) if (this.keys.has(list[i])) return true;
+    return false;
+  }
+
+  /** Was any key bound to `action` pressed this exact frame? */
+  hit(action) {
+    const list = this.keymap[action];
+    for (let i = 0; i < list.length; i++) if (this.pressed.has(list[i])) return true;
+    return false;
+  }
+
+  /** The primary binding for an action, pretty-printed for the UI. */
+  label(action) {
+    const k = this.keymap[action][0];
+    if (k === ' ') return 'SPACE';
+    const names = { ArrowUp: 'UP', ArrowDown: 'DOWN', ArrowLeft: 'LEFT', ArrowRight: 'RIGHT' };
+    return names[k] || k.toUpperCase();
+  }
+
+  /** Start listening for the next keypress to rebind `action`. */
+  capture(action, onDone) {
+    this.capturing = { action, onDone };
   }
 
   bind() {
     addEventListener('keydown', (e) => {
       if (e.repeat) return;
       const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+      // Remap capture: the next key becomes the action's primary binding.
+      if (this.capturing) {
+        e.preventDefault();
+        const cap = this.capturing;
+        this.capturing = null;
+        if (k !== 'Escape') {
+          this.keymap[cap.action] = [k];
+          saveKeymap(this.keymap);
+        }
+        cap.onDone && cap.onDone(k);
+        return;
+      }
       this.keys.add(k);
       this.pressed.add(k);
       const g = this.game;
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
+      const bound = Object.values(this.keymap).some((l) => l.includes(k));
+      if (bound || ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
         e.preventDefault();
       }
       if (k === 'm') {
@@ -159,8 +248,8 @@ export class Input {
     if (!kart) return;
     const inp = kart.input;
 
-    const left = this.keys.has('ArrowLeft') || this.keys.has('a');
-    const right = this.keys.has('ArrowRight') || this.keys.has('d');
+    const left = this.has('left');
+    const right = this.has('right');
     // Steering convention (matches the original bundle and the AI, which
     // steers by heading delta): +1 = left, -1 = right.
     let steer = (left ? 1 : 0) - (right ? 1 : 0);
@@ -168,8 +257,8 @@ export class Input {
     steer += this.padSteer();
     inp.steer = clamp(steer, -1, 1);
 
-    const up = this.keys.has('ArrowUp') || this.keys.has('w');
-    const down = this.keys.has('ArrowDown') || this.keys.has('s');
+    const up = this.has('accel');
+    const down = this.has('brake');
     inp.accel = up || this.padButton(0) ? 1 : 0;
     inp.brake = down || this.touchBrake || this.padButton(1) ? 1 : 0;
 
@@ -178,16 +267,15 @@ export class Input {
       if (!inp.brake) inp.accel = Math.max(inp.accel, this.game.autoAccel ? 1 : inp.accel);
     }
 
-    const driftDown =
-      this.keys.has(' ') || this.keys.has('Shift') || this.touchDrift || this.padButton(5) || this.padButton(4);
+    const driftDown = this.has('drift') || this.touchDrift || this.padButton(5) || this.padButton(4);
     if (inp.turbo && !inp.drift) inp.driftPressed = false;
     inp.driftPressed = !inp.drift && driftDown && !inp.turbo;
     inp.drift = driftDown && !inp.turbo;
 
-    inp.turbo = this.pressed.has('Shift') || this.pressed.has('touch-turbo') ||
+    inp.turbo = this.hit('turbo') || this.pressed.has('touch-turbo') ||
       this.padButton(2) || this.padButton(6);
 
-    inp.item = this.pressed.has('e') || this.pressed.has('touch-item') || this.padButton(3);
+    inp.item = this.hit('item') || this.pressed.has('touch-item') || this.padButton(3);
   }
 
   /** Call at the end of every frame. */

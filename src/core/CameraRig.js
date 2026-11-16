@@ -143,8 +143,8 @@ export class CameraRig {
 
     cam.position.copy(this.pos);
 
-    // Screen shake.
-    const shake = kart.game.shake;
+    // Screen shake (skipped entirely in reduced-motion mode).
+    const shake = kart.game.reducedMotion ? 0 : kart.game.shake;
     if (shake > 0) {
       cam.position.x += (Math.random() - 0.5) * shake;
       cam.position.y += (Math.random() - 0.5) * shake;

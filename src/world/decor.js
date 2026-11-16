@@ -92,7 +92,7 @@ export function buildDecor(track, A, fx, quality = 'high') {
   const isVolcano = def.id === 'volcano';
   const isDesert = def.id === 'desert';
   const isSnow = def.id === 'snow';
-  const lowQ = quality === 'low';
+  const lowQ = quality !== 'high'; // medium + low get thinned-out props
 
   // ---------------------------------------------------------------- palms etc
   if (!isSky) {

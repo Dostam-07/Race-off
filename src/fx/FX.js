@@ -321,7 +321,10 @@ export class SkidMarks {
 // ------------------------------------------------------------- the facade
 export class FX {
   constructor(scene, camera, quality = 'high') {
-    const n = quality === 'low' ? 0.5 : 1;
+    // Particle budgets shrink with the quality tier: low-end phones get half
+    // the pools so effects never become the bottleneck.
+    const n = quality === 'low' ? 0.5 : quality === 'medium' ? 0.75 : 1;
+    this.lite = n < 1;
     this.camera = camera;
     this.alpha = new PointFX(scene, Math.round(1400 * n), true);
     this.streaks = new StreakFX(scene, Math.round(520 * n));
@@ -334,6 +337,7 @@ export class FX {
 
   /** Radial spark burst - the workhorse effect. */
   sparks(x, y, z, count, speed, color, life = 0.35, size = 0.6, vx = 0, vz = 0) {
+    if (this.lite) count = Math.ceil(count * 0.6);
     const [r, g, b] = color;
     for (let i = 0; i < count; i++) {
       const a = Math.random() * Math.PI * 2;
@@ -354,6 +358,7 @@ export class FX {
 
   /** A puff of billowing smoke. */
   smoke(x, y, z, count, color, life = 1.4, spread = 1.6, size = 0.6) {
+    if (this.lite) count = Math.ceil(count * 0.6);
     const [r, g, b] = color;
     for (let i = 0; i < count; i++) {
       const a = Math.random() * Math.PI * 2;

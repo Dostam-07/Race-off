@@ -221,6 +221,16 @@ body.cap #mutechip, body.nohud #hud { display: none !important; }
 .lboard .lb-n { width: 22px; font-style: italic; }
 .lboard .lb-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lboard .lb-t { font-weight: 700; }
+#p-quality { display: flex; justify-content: center; gap: 8px; margin-top: 14px; align-items: center; }
+#p-quality .qhint { font-size: 12px; letter-spacing: 3px; opacity: .7; margin-right: 4px; }
+#p-quality .mchip { font-size: 15px; padding: 4px 12px; }
+#keymap { margin-top: 14px; text-align: left; }
+#keymap .km-h { font-size: 12px; letter-spacing: 3px; opacity: .75; margin-bottom: 6px; text-align: center; }
+#keymap .km-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 14px; }
+#keymap .km-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 3px 10px; border-radius: 12px; background: rgba(255,255,255,.07); font-size: 13px; letter-spacing: .5px; cursor: pointer; }
+#keymap .km-row:hover { background: rgba(255,255,255,.16); }
+#keymap .km-row.listen { background: #ffe14a; color: var(--ink); }
+#keymap .km-row b { font-size: 14px; font-style: italic; }
 .again { text-align: center; margin-top: 14px; letter-spacing: 2px; font-size: 16px; animation: pulse 1.1s infinite; }
 /* ---- small screens: the HUD widgets shrink together (--hs is set from the window size) */
 #lap, #timer, #best, #mode, #coins, #board, #minimap, #itembox, #itemname, #itemkey, #pos, #speed { zoom: var(--hs, 1); }
@@ -311,3 +321,13 @@ body.touch #toast { bottom: 31%; } body.touch #warn { bottom: 44%; }
 .pbtns { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; margin-top: 6px; }
 .pbtns div { font-size: 17px; letter-spacing: 2px; padding: 12px 22px 10px; border-radius: 28px; border: 3px solid #fff; background: rgba(8,16,50,.55); box-shadow: 0 4px 0 rgba(8,16,50,.6); }
 .pbtns #p-resume { background: #fff; color: var(--ink); } .pbtns div { cursor: pointer; } .pbtns div:hover { transform: translateY(-2px); } body.mp #p-restart { display: none; }
+
+/* Accessibility: respect the OS reduce-motion preference - kill decorative
+   UI animation while keeping instant state changes. */
+@media (prefers-reduced-motion: reduce) {
+  .logo .logoimg, .logo .b, .press, .lvl, .lvl.next, #pickname.pop, .rr, .toast, #banner, #count, #ewheel-grid, .mchip, .mbtn, .pbtns div {
+    animation: none !important;
+    transition: none !important;
+  }
+  @keyframes pulse { 50% { transform: none; opacity: 1; } }
+}

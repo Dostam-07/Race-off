@@ -22,6 +22,9 @@ const loopMethods = {
     this.rankCd = 0;
     this.boostKick = 0;
     this._rivalPrev = null; // previous distance to nearest rival, for doppler
+    this._resCool = 0; // adaptive-resolution cooldown (seconds)
+    this._goodStreak = 0;
+    this._autoResAt = 0;
     this.hints = {};
     this.accelHeld = 0;
     this.goT = 0;
@@ -38,6 +41,31 @@ const loopMethods = {
     cancelAnimationFrame(this._raf);
   },
 
+  /** Adaptive resolution (quality tier 'medium'/'high' only): when the frame
+   *  rate sags, shrink the render buffer a step; when there is sustained
+   *  headroom, grow it back. Downscales fast, upscales slowly. */
+  autoRes(dt) {
+    if (this.quality === 'low' || this.state === 'loading') return;
+    if (this._resCool > 0) {
+      this._resCool -= dt;
+      return;
+    }
+    const fps = this.fps;
+    if (fps < 45 && this.resScale > 0.56) {
+      this.setResScale(this.resScale - 0.15);
+      this._resCool = 1.5; // let the change settle before judging it
+      this._goodStreak = 0;
+    } else if (fps > 57 && this.resScale < 1) {
+      if (++this._goodStreak >= 4) {
+        this.setResScale(this.resScale + 0.1);
+        this._resCool = 1.5;
+        this._goodStreak = 0;
+      }
+    } else {
+      this._goodStreak = 0;
+    }
+  },
+
   tick(now) {
     const raw = (now - this.last) / 1000;
     this.last = now;
@@ -50,6 +78,9 @@ const loopMethods = {
       this.fps = Math.round(this.frames / this.fpsAcc);
       this.frames = 0;
       this.fpsAcc = 0;
+      const span = (now - (this._autoResAt || now)) / 1000;
+      this._autoResAt = now;
+      this.autoRes(span);
     }
 
     if (this.paused) {

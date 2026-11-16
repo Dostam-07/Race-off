@@ -44,6 +44,13 @@ export class Game {
     this.flash = 0;
     this.boostKick = 0;
     this.paused = false;
+    // Accessibility: honour the OS reduce-motion preference (no screen shake,
+    // calmer camera, CSS handles the UI animations).
+    try {
+      this.reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    } catch {
+      this.reducedMotion = false;
+    }
     this.finishedCount = 0;
     this.cup = null;
     this.cc = 1; // engine class multiplier: 0.85 = 50cc, 1 = 100cc, 1.15 = 150cc
@@ -63,13 +70,25 @@ export class Game {
   }
 
   // ------------------------------------------------------------ infrastructure
+  /** Pixel-ratio cap and shadow size per quality tier. */
+  tierCaps() {
+    return this.quality === 'low'
+      ? { ratio: 1, shadow: 1024, aa: false }
+      : this.quality === 'medium'
+        ? { ratio: 1.35, shadow: 1536, aa: true }
+        : { ratio: 1.8, shadow: 2048, aa: true };
+  }
+
   initRenderer() {
+    const caps = this.tierCaps();
+    this.resScale = 1; // adaptive resolution multiplier (loop.js tunes it)
     const renderer = new THREE.WebGLRenderer({
-      antialias: this.quality !== 'low',
+      antialias: caps.aa,
       powerPreference: 'high-performance',
       stencil: false,
     });
-    renderer.setPixelRatio(Math.min(devicePixelRatio, this.quality === 'low' ? 1 : 1.8));
+    this.resCap = caps.ratio;
+    renderer.setPixelRatio(Math.min(devicePixelRatio, caps.ratio));
     renderer.setSize(innerWidth, innerHeight);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -83,6 +102,15 @@ export class Game {
     addEventListener('resize', () => this.resize());
   }
 
+  /** Adaptive resolution: scale the render buffer without touching CSS size.
+   *  The loop lowers this when the frame rate sags, raises it back when there
+   *  is headroom. s in 0.55..1. */
+  setResScale(s) {
+    this.resScale = Math.max(0.55, Math.min(1, s));
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio, this.resCap) * this.resScale);
+    this.resize();
+  }
+
   initScene() {
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(62, innerWidth / innerHeight, 0.35, 1800);
@@ -94,10 +122,8 @@ export class Game {
 
     this.sun = new THREE.DirectionalLight(0xfff2d8, 2.4);
     this.sun.castShadow = true;
-    this.sun.shadow.mapSize.set(
-      this.quality === 'low' ? 1024 : 2048,
-      this.quality === 'low' ? 1024 : 2048,
-    );
+    const shadowRes = this.tierCaps().shadow;
+    this.sun.shadow.mapSize.set(shadowRes, shadowRes);
     const d = 90;
     Object.assign(this.sun.shadow.camera, {
       left: -d, right: d, top: d, bottom: -d, near: 1, far: 420,

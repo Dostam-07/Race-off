@@ -1,0 +1,67 @@
+# Race-Off CI: build + the full deterministic Playwright battery on every PR.
+#
+# The tests drive the real game in headless Chromium (SwiftShader WebGL) at
+# http://localhost:5173, so CI boots the dev server first. Multiplayer tests
+# dial the public PeerJS cloud broker - they run but are allowed to flake.
+name: ci
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium (+ system deps for SwiftShader GL)
+        run: npx playwright install --with-deps chromium
+
+      - name: Build
+        run: npx vite build
+
+      - name: Start dev server
+        run: |
+          npx vite --port 5173 --strictPort &
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:5173/ >/dev/null && break
+            sleep 1
+          done
+          curl -sf http://localhost:5173/ >/dev/null || (echo "dev server did not start" && exit 1)
+
+      - name: Solo gameplay battery
+        run: |
+          set -e
+          for t in smoke test_race test_all_tracks test_finish test_gp test_pause \
+                   test_collide test_steer test_timetrial test_ghost test_feel \
+                   test_new_tracks test_class_mirror test_daily test_unlocks \
+                   test_pwa test_share test_scores test_a11y; do
+            echo "::group::$t"
+            node tools/$t.mjs
+            echo "::endgroup::"
+          done
+
+      - name: UI audit (8 viewports x 5 screens)
+        run: node tools/audit_ui.mjs
+
+      - name: Multiplayer battery (network-dependent, non-blocking)
+        continue-on-error: true
+        run: |
+          set -e
+          for t in test_mp test_interp test_emotes test_spectate test_directory; do
+            echo "::group::$t"
+            node tools/$t.mjs || echo "::warning::$t failed (network-dependent)"
+            echo "::endgroup::"
+          done
