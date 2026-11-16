@@ -1,0 +1,16 @@
+Showing logs from functions for the last 3m:
+
+  ??   Function
+
+[?? companion] 2026-11-12T05:53:11.610Z INFO Duration: 537 ms	Memory Usage: 108 MB
+[?? companion] 2026-11-12T05:53:11.747Z ERROR Invoke Error 	{"errorType":"NetlifyUserError","errorMessage":"Function returned an unsupported value. Accepted types are 'Response' or 'undefined'","name":"NetlifyUserError","stack":["NetlifyUserError: Function returned an unsupported value. Accepted types are 'Response' or 'undefined'","    at HS (file:///var/task/___netlify-bootstrap.mjs:2:166516)","    at LO (file:///var/task/___netlify-bootstrap.mjs:2:172129)","    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)","    at async StreamingInvokeProcessor.handler (file:///var/task/___netlify-bootstrap.mjs:2:171113)","    at async StreamingInvokeProcessor.waitForStreamClosure (file:///var/runtime/index.mjs:1187:20)","    at async StreamingInvokeProcessor.processInvoke (file:///var/runtime/index.mjs:1176:7)","    at async _Runtime.processSingleConcurrent (file:///var/runtime/index.mjs:1237:7)","    at async _Runtime.start (file:///var/runtime/index.mjs:1224:7)","    at async ignition (file:///var/runtime/index.mjs:1725:5)"]}
+
+[?? companion] 2026-11-12T05:54:11.462Z INFO Duration: 573 ms	Memory Usage: 122 MB
+[?? companion] 2026-11-12T05:54:12.452Z INFO Duration: 97 ms	Memory Usage: 126 MB
+[?? companion] 2026-11-12T05:54:12.881Z INFO Duration: 148 ms	Memory Usage: 128 MB
+[?? companion] 2026-11-12T05:54:13.426Z INFO Duration: 40 ms	Memory Usage: 128 MB
+[?? companion] 2026-11-12T05:54:13.760Z INFO Duration: 54 ms	Memory Usage: 128 MB
+[?? companion] 2026-11-12T05:54:14.157Z INFO Duration: 44 ms	Memory Usage: 129 MB
+[?? companion] 2026-11-12T05:54:14.498Z INFO Duration: 31 ms	Memory Usage: 130 MB
+[?? companion] 2026-11-12T05:54:22.443Z INFO Duration: 103 ms	Memory Usage: 131 MB
+

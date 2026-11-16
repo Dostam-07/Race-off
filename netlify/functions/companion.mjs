@@ -30,15 +30,17 @@ const CORS = {
   'access-control-allow-headers': 'content-type',
 };
 
-const json = (status, body) => ({
-  statusCode: status,
-  headers: {
-    ...CORS,
-    'content-type': 'application/json',
-    'cache-control': 'no-store',
+const json = (status, body) => new Response(
+  status === 204 ? null : JSON.stringify(body),
+  {
+    status,
+    headers: {
+      ...CORS,
+      'content-type': 'application/json',
+      'cache-control': 'no-store',
+    },
   },
-  body: JSON.stringify(body),
-});
+);
 
 // Blobs can be unavailable (local preview, misconfigured site) - every store
 // access degrades to an empty answer rather than a 500.
@@ -95,7 +97,7 @@ export default async (req) => {
       room.open = room.phase === 'lobby' && room.players < 6;
       if (st) {
         try {
-          await st.set(code, room);
+          await st.setJSON(code, room);
         } catch { /* best effort */ }
       }
       return json(200, { ok: true, gen: room.gen });

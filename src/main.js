@@ -9,6 +9,7 @@ import { installRaceFlow } from './core/raceFlow.js';
 import { installLoop } from './core/loop.js';
 import { installMultiplayer } from './net/Multiplayer.js';
 import { track } from './core/analytics.js';
+import * as dir from './net/directory.js';
 
 installRaceFlow(Game);
 installLoop(Game);
@@ -43,6 +44,8 @@ async function main() {
   const params = new URLSearchParams(location.search);
   const game = new Game(document.body, { quality: detectQuality(params) });
   window.game = game;
+  // Debug/diagnostics handle for the directory client (used by tests).
+  window.__dir = dir;
 
   // loadModels reports a 0..1 fraction; show it as a clean percentage.
   await game.boot((fraction) => {

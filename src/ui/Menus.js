@@ -289,6 +289,9 @@ export class Menus {
     if (!host) return;
     clearTimeout(this._roomsT);
     host.innerHTML = '';
+    // Keep the loop alive even when the list is empty or we are hidden -
+    // otherwise a first empty result would silence the panel forever.
+    this._roomsT = setTimeout(() => this.refreshRooms(), 6000);
     if (!this.visible() || !dirAvailable()) return;
     const list = await dirList();
     if (!list.length) return;
@@ -312,7 +315,6 @@ export class Menus {
       });
       host.appendChild(row);
     }
-    this._roomsT = setTimeout(() => this.refreshRooms(), 6000);
   }
 
   visible() {

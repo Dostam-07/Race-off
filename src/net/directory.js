@@ -13,7 +13,7 @@ const TTL_MS = 45000;
 
 let base = null;
 let probed = false;
-let dead = false; // endpoint unreachable - stop asking this session
+let deadAt = 0; // last failure time - requests pause for 30s, then retry
 
 const isLocal = () =>
   ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
@@ -30,7 +30,7 @@ export function dirBase() {
       return base;
     }
   } catch { /* no URLSearchParams */ }
-  base = isLocal() ? 'http://localhost:8785' : '';
+  base = isLocal() ? 'http://localhost:8785' : '/companion-api';
   return base;
 }
 
@@ -41,17 +41,20 @@ export function dirAvailable() {
 
 const req = async (path, opts = {}) => {
   const b = dirBase();
-  if (!b || dead) return null;
+  // A failed request (timeout, cold serverless start, offline) pauses the
+  // directory for 30s instead of killing it for the whole session.
+  if (!b || (deadAt && Date.now() - deadAt < 30000)) return null;
   try {
     const res = await fetch(b + path, {
       ...opts,
       headers: { 'content-type': 'application/json', ...(opts.headers || {}) },
-      signal: AbortSignal.timeout ? AbortSignal.timeout(2500) : undefined,
+      signal: AbortSignal.timeout ? AbortSignal.timeout(6000) : undefined,
     });
     if (!res.ok) return null;
+    deadAt = 0;
     return await res.json();
   } catch {
-    dead = true; // network error (not a 404): the directory is not there
+    deadAt = Date.now();
     return null;
   }
 };
