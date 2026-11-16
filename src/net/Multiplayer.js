@@ -482,6 +482,8 @@ const mpMethods = {
         const kart = this.kartOf(racer);
         if (kart) kart.place(slot);
       });
+      // Lay the field out on a FIXED slot order so the map is identical on
+      // every call and matches what startNetRace will compute afterwards.
       this.team = { pts: { red: 0, blue: 0 }, members: { red: [], blue: [] } };
       this.assignTeams();
       const map = this.teamMap();

@@ -229,7 +229,12 @@ const raceFlow = {
     if (byRacer) {
       // Online: the host's authoritative racer -> side map, so every client
       // agrees even though each sees its own player in a different slot.
-      for (const k of this.karts) k.team = byRacer[k.def.id] || 'red';
+      // No slot algebra and no player-based mirroring here - that is what
+      // makes the split identical everywhere.
+      for (const k of this.karts) {
+        const side = byRacer[k.def.id];
+        k.team = side === 'blue' ? 'blue' : 'red';
+      }
     } else {
       // Solo: alternate by grid slot, which is deterministic locally.
       const bySlot = this.karts.slice().sort((a, b) => a.slot - b.slot);
